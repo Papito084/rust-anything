@@ -33,6 +33,80 @@ fn write_file(path: &Path, content: &str) {
     std::fs::write(path, content).unwrap();
 }
 
+fn assert_valid_svg_xml(xml: &str) {
+    let mut stack: Vec<String> = Vec::new();
+    let mut pos = 0;
+    let bytes = xml.as_bytes();
+    let mut found_root = false;
+
+    while pos < bytes.len() {
+        if bytes[pos] == b'<' {
+            let mut end = pos + 1;
+            let mut in_quote = None;
+            while end < bytes.len() {
+                let b = bytes[end];
+                if in_quote.is_none() && (b == b'"' || b == b'\'') {
+                    in_quote = Some(b);
+                } else if in_quote == Some(b) {
+                    in_quote = None;
+                } else if in_quote.is_none() && b == b'>' {
+                    break;
+                }
+                end += 1;
+            }
+            assert!(end < bytes.len(), "unclosed XML tag starting at {pos}");
+            let tag_content = xml[pos + 1..end].trim();
+            if tag_content.starts_with("!--") {
+                // comment: find end
+            } else if tag_content.starts_with('?') || tag_content.starts_with('!') {
+                // PI or DOCTYPE
+            } else if let Some(closing) = tag_content.strip_prefix('/') {
+                let tag_name = closing.trim();
+                let last = stack.pop().expect("unexpected closing tag in XML");
+                assert_eq!(last, tag_name, "mismatched XML closing tag");
+            } else {
+                let self_closing = tag_content.ends_with('/');
+                let inner = if self_closing {
+                    tag_content[..tag_content.len() - 1].trim()
+                } else {
+                    tag_content
+                };
+                let tag_name = inner
+                    .split(|c: char| c.is_whitespace() || c == '/')
+                    .next()
+                    .filter(|s| !s.is_empty())
+                    .expect("empty tag name in XML");
+                if !found_root {
+                    assert_eq!(tag_name, "svg", "root element must be svg");
+                    assert!(
+                        inner.contains("xmlns=\"http://www.w3.org/2000/svg\""),
+                        "root element must declare SVG namespace"
+                    );
+                    found_root = true;
+                }
+                if !self_closing {
+                    stack.push(tag_name.to_string());
+                }
+            }
+            pos = end + 1;
+        } else if bytes[pos] == b'&' {
+            let end = xml[pos..].find(';').expect("unclosed XML entity") + pos;
+            let entity = &xml[pos + 1..end];
+            let valid = matches!(entity, "amp" | "lt" | "gt" | "quot" | "apos")
+                || (entity.starts_with('#')
+                    && (entity[1..].chars().all(|c| c.is_ascii_digit())
+                        || (entity.starts_with("#x")
+                            && entity[2..].chars().all(|c| c.is_ascii_hexdigit()))));
+            assert!(valid, "invalid XML entity: &{entity};");
+            pos = end + 1;
+        } else {
+            pos += 1;
+        }
+    }
+    assert!(found_root, "missing root svg tag");
+    assert!(stack.is_empty(), "unclosed XML tags: {stack:?}");
+}
+
 #[test]
 fn report_on_a_built_crate_writes_markdown_and_svg_and_reflects_enable() {
     let tmp = TempDir::new("card-e2e");
@@ -140,13 +214,7 @@ fn report_on_a_built_crate_writes_markdown_and_svg_and_reflects_enable() {
     assert!(md_before.contains("| `add` |"), "{md_before}");
 
     let svg = std::fs::read_to_string(&card_before.svg).unwrap();
-    let trimmed = svg.trim();
-    assert!(trimmed.starts_with("<svg"), "{trimmed}");
-    assert!(trimmed.ends_with("</svg>"), "{trimmed}");
-    assert!(
-        trimmed.contains("xmlns=\"http://www.w3.org/2000/svg\""),
-        "{trimmed}"
-    );
+    assert_valid_svg_xml(&svg);
 
     enable::enable(&crate_dir).unwrap();
 
