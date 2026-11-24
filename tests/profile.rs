@@ -61,9 +61,7 @@ fn node_24_plus() -> bool {
 
 #[test]
 fn profile_python_workload_finds_hot_function() {
-    let Some(py) = python_bin() else {
-        return;
-    };
+    let py = python_bin().expect("Python 3 is required for profiling integration tests");
     let tmp = TempDir::new("profile-py");
     std::fs::write(
         tmp.path().join("lib.py"),
