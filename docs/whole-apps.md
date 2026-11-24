@@ -74,7 +74,7 @@ the port order as pieces (units that import each other move together), and numbe
 with a recommended answer: keep units, blocked units, dependencies with no or a partial crate.
 
 Then prove the whole program from the outside. `record` and `diff` prove one unit; `app record`
-and `app replay` prove the app, for CLIs and servers in any of the six languages (the app is a
+and `app replay` prove the app, for any program, in any language (the app is a
 black box):
 
 ```sh
