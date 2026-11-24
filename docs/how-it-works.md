@@ -40,7 +40,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `rust-anything bench <crate>` | Times the recorded cases on the original and on Rust, bridge included |
 | 4. Shadow | `rust-anything shadow <crate>` | Drop-in that runs both, returns the original's result, reports mismatches; `RUST_ANYTHING_MODE=old\|shadow\|new` |
 | 5. Gate | `rust-anything gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, a recorded failing case for every error path of the original, no `unwrap`/`expect`/`panic!` where the original returns an error (unless marked `// INFALLIBLE: <why>`), build, API, behavior |
-| 6. Switch | `rust-anything enable <crate>` / `disable <crate>` | Turns a gated TS/JS or Python port on for every caller, and off again byte for byte ([Switch a port on and off](#switch-a-port-on-and-off)) |
+| 6. Switch | `rust-anything enable <crate>` / `disable <crate>` | Turns a gated TS/JS, Python or PowerShell port on for every caller, and off again byte for byte ([Switch a port on and off](#switch-a-port-on-and-off)) |
 | 7. Report | `rust-anything report <crate>` | `report/REPORT.md` and `report/card.svg` for a pull request: recorded cases matched, speedup from `bench`, fallback rate, on or off, the machine and its cores |
 | Cache | `rust-anything clean` | Removes the build folder every port and bridge shares ([One build cache](#one-build-cache)) |
 | Agents | `rust-anything setup` | Registers the MCP server (`rust-anything mcp`, every step as a tool) and the workflow skill ([`skills/rust-anything/SKILL.md`](../skills/rust-anything/SKILL.md)) with your coding agents |
@@ -102,7 +102,7 @@ Every way to switch, in one place:
 
 | What | On | Off |
 | --- | --- | --- |
-| A TS/JS or Python unit, in place | `rust-anything enable <crate>`: one marked block in each original file rebinds the ported functions to the Rust module, so every caller gets Rust and no import changes. It refuses while a recorded case differs (`--force` skips that check); `go` runs it only after diff and gate pass | `rust-anything disable <crate>`: removes exactly the lines `enable` added, so the files are byte for byte what they were |
+| A TS/JS, Python or PowerShell unit, in place | `rust-anything enable <crate>`: one marked block in each original file rebinds the ported functions to the Rust module, so every caller gets Rust and no import changes. It refuses while a recorded case differs (`--force` skips that check); `go` runs it only after diff and gate pass | `rust-anything disable <crate>`: removes exactly the lines `enable` added, so the files are byte for byte what they were |
 | That unit, for one run | (on by default once enabled) | `RUST_ANYTHING_UNIT_<NAME>=original` (`<NAME>` is the crate name without `-rs`, upper case: `RUST_ANYTHING_UNIT_DEDUPE`), or `RUST_ANYTHING_MODE=old` for every unit |
 | A shadow module (any language) | Import it where the app imported the original; `RUST_ANYTHING_MODE=new` runs only Rust | `RUST_ANYTHING_MODE=old`; the default, `shadow`, returns the original's result and compares Rust |
 | A unit wired into a front door (`app wire`) | Wired units answer in Rust | `RUST_ANYTHING_UNIT_<NAME>=original` sends that unit's commands to the original |

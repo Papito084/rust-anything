@@ -316,7 +316,7 @@ enum Cmd {
         command: Vec<String>,
     },
     /// Switch a ported unit on: one marked block in the original source files rebinds its
-    /// functions to the Rust module, for every caller (TS/JS and Python). `disable` removes it.
+    /// functions to the Rust module, for every caller (TS/JS, Python and PowerShell). `disable` removes it.
     Enable {
         /// Crate folder made by `bridge`.
         #[arg(default_value = ".", value_parser = absolute)]

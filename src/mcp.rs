@@ -510,7 +510,7 @@ fn tool_schemas() -> Value {
         },
         {
             "name": "enable",
-            "description": "Switch a ported TS/JS or Python unit on: one marked block in each original source file rebinds the unit's functions to the built Rust module, for every caller, with no import changed. RUST_ANYTHING_MODE=old or RUST_ANYTHING_UNIT_<NAME>=original runs the original for one run. Refuses while recorded cases differ unless `force`, `partial`, or `only` names functions that match.",
+            "description": "Switch a ported TS/JS, Python or PowerShell unit on: one marked block in each original source file rebinds the unit's functions to the built Rust module, for every caller, with no import changed. RUST_ANYTHING_MODE=old or RUST_ANYTHING_UNIT_<NAME>=original runs the original for one run. Refuses while recorded cases differ unless `force`, `partial`, or `only` names functions that match.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "only": { "type": "array", "items": { "type": "string" }, "description": "Switch on only these exported functions." },
