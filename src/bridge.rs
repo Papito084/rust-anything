@@ -34,6 +34,18 @@ pub enum Kind {
     Ffi,
 }
 
+impl Kind {
+    pub fn label(self) -> &'static str {
+        match self {
+            Kind::Napi => "napi-rs",
+            Kind::Wasm => "wasm-bindgen",
+            Kind::Pyo3 => "PyO3",
+            Kind::CAbi => "the C ABI",
+            Kind::Ffi => "a JSON dispatcher",
+        }
+    }
+}
+
 /// The global allocator of a crate with batches (`bridge --allocator`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
 pub enum Allocator {
@@ -1187,9 +1199,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     let unit = &unit;
     if matches!(unit.status, Status::Keep | Status::Blocked) && !opts.force {
         bail!(
-            "unit `{}` is {:?}: {}. Pass --force to bridge it anyway.",
+            "unit `{}` is {}: {}. Pass --force to bridge it anyway.",
             unit.id,
-            unit.status,
+            unit.status.label(),
             unit.notes.first().map_or("", String::as_str)
         );
     }
@@ -1787,13 +1799,7 @@ fn readme(m: &Manifest) -> String {
          rust-anything gate .     # fmt, clippy, tests, unsafe, API, diff\n```\n{switch}",
         name = m.crate_name,
         unit = m.unit,
-        kind = match m.kind {
-            Kind::Napi => "napi-rs",
-            Kind::Wasm => "wasm-bindgen",
-            Kind::Pyo3 => "PyO3",
-            Kind::CAbi => "the C ABI",
-            Kind::Ffi => "a JSON dispatcher",
-        },
+        kind = m.kind.label(),
     )
 }
 
@@ -1873,6 +1879,15 @@ mod tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kind_labels_match_documentation() {
+        assert_eq!(Kind::Napi.label(), "napi-rs");
+        assert_eq!(Kind::Wasm.label(), "wasm-bindgen");
+        assert_eq!(Kind::Pyo3.label(), "PyO3");
+        assert_eq!(Kind::CAbi.label(), "the C ABI");
+        assert_eq!(Kind::Ffi.label(), "a JSON dispatcher");
+    }
 
     #[test]
     fn keep_entries_are_trimmed() {

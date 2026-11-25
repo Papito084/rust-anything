@@ -337,12 +337,7 @@ fn top_risks(u: &UnitReport, n: usize) -> String {
 }
 
 fn status_label(status: Status) -> &'static str {
-    match status {
-        Status::Ready => "ready",
-        Status::Caution => "caution",
-        Status::Blocked => "blocked",
-        Status::Keep => "keep",
-    }
+    status.label()
 }
 
 #[cfg(test)]

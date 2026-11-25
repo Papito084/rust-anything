@@ -122,7 +122,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         as_json: Vec::new(),
         allocator: Default::default(),
     });
-    assert!(blocked.unwrap_err().to_string().contains("Blocked"));
+    assert!(blocked.unwrap_err().to_string().contains("blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

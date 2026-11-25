@@ -452,3 +452,30 @@ fn package_refuses_invalid_version_in_dry_run() {
     );
     let _ = std::fs::remove_dir_all(&root);
 }
+
+#[test]
+fn package_refuses_non_packaged_crate_kinds_with_language_and_dispatcher() {
+    let root = project(
+        "go-crate",
+        &[
+            ("go.mod", "module example.com/pkg\n\ngo 1.22\n"),
+            (
+                "main.go",
+                "package main\n\nfunc Add(a, b int) int { return a + b }\n",
+            ),
+        ],
+    );
+    let port = bridged(&root, "main.go", Kind::Ffi);
+    let err = package::package(&Options {
+        crate_dir: &port,
+        dry_run: true,
+        version: None,
+        ..options(&port)
+    })
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "package covers napi-rs, wasm-bindgen and PyO3 crates; this one is a Go crate (JSON dispatcher)"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}

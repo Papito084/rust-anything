@@ -34,6 +34,17 @@ pub enum Status {
     Keep,
 }
 
+impl Status {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::Caution => "caution",
+            Self::Blocked => "blocked",
+            Self::Keep => "keep",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Bridge {
@@ -1218,6 +1229,14 @@ fn topological(deps_of: &[Vec<usize>]) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn status_labels_match_analyze() {
+        assert_eq!(Status::Ready.label(), "ready");
+        assert_eq!(Status::Caution.label(), "caution");
+        assert_eq!(Status::Blocked.label(), "blocked");
+        assert_eq!(Status::Keep.label(), "keep");
+    }
 
     #[test]
     fn resolves_sibling_file_before_directory_index() {

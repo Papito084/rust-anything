@@ -237,10 +237,17 @@ pub fn package(opts: &Options) -> Result<Outcome> {
                 out.display()
             ));
         }
-        Kind::CAbi | Kind::Ffi => bail!(
-            "package covers napi-rs, wasm-bindgen and PyO3 crates; this one is {:?}",
-            manifest.kind
-        ),
+        Kind::CAbi | Kind::Ffi => {
+            let label = manifest
+                .kind
+                .label()
+                .trim_start_matches("a ")
+                .trim_start_matches("the ");
+            bail!(
+                "package covers napi-rs, wasm-bindgen and PyO3 crates; this one is a {} crate ({label})",
+                manifest.language.name()
+            );
+        }
     }
     if matches!(manifest.kind, Kind::Pyo3 | Kind::Napi) {
         let (workflow, note) = workflow_file(&manifest, &name, &version, &crate_dir, &out)?;

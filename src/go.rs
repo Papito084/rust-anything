@@ -331,9 +331,9 @@ pub fn go(opts: &Options) -> Result<Outcome> {
         say(
             &mut steps,
             format!(
-                "bridged {} ({:?}) at {}",
+                "bridged {} ({}) at {}",
                 outcome.exports.join(", "),
-                outcome.kind,
+                outcome.kind.label(),
                 outcome.crate_dir.display()
             ),
         );
