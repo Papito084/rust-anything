@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The `port_unit` and `port_whole_app` MCP prompts strip the skill's front matter when `SKILL.md`
+  has CRLF line endings, as on a Windows checkout with `core.autocrlf=true` (#501, #515 by @Papito084).
 - Generated Go, Java, Kotlin and Ruby bridges pass a zero-argument fallible port function straight
   to `run`/`guard` (`run(port::pong)`) instead of wrapping it in a closure, so freshly bridged code
   passes `gate`'s clippy `redundant_closure` check again (#310, #487 by @Lewandox).
