@@ -220,8 +220,14 @@ fn inner(c_type: &str) -> String {
 
 /// A C declaration of `name` with type `c_type` (`const uint8_t *in`).
 pub fn c_decl(c_type: &str, name: &str) -> String {
-    let stars = c_type.matches('*').count();
     let base = c_type.trim_end_matches(['*', ' ']);
+    let stars = c_type
+        .trim_end()
+        .chars()
+        .rev()
+        .take_while(|c| *c == '*' || *c == ' ')
+        .filter(|c| *c == '*')
+        .count();
     if stars == 0 {
         format!("{base} {name}")
     } else {
@@ -892,4 +898,77 @@ pub fn cargo_toml(m: &Manifest) -> String {
          [profile.release]\nlto = true\n\n[lints.clippy]\nall = {{ level = \"warn\", priority = -1 }}\n\n[lints.rust]\nunused_lifetimes = \"warn\"\ntrivial_numeric_casts = \"warn\"\n",
         m.crate_name, m.unit
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pointee() {
+        // Scalar
+        assert_eq!(pointee("int"), "int");
+        assert_eq!(pointee("uint32_t"), "uint32_t");
+
+        // One pointer
+        assert_eq!(pointee("int *"), "int");
+
+        // Two pointers
+        assert_eq!(pointee("char **"), "char");
+
+        // Const
+        assert_eq!(pointee("const uint8_t *"), "uint8_t");
+        assert_eq!(pointee("const char **"), "char");
+
+        // Void *
+        assert_eq!(pointee("void *"), "void");
+        assert_eq!(pointee("const void *"), "void");
+    }
+
+    #[test]
+    fn test_inner() {
+        // Scalar
+        assert_eq!(inner("int"), "int");
+
+        // One pointer
+        assert_eq!(inner("int *"), "int");
+
+        // Two pointers
+        assert_eq!(inner("char **"), "char *");
+
+        // Const
+        assert_eq!(inner("const uint8_t *"), "const uint8_t");
+        assert_eq!(inner("const char **"), "const char *");
+
+        // Void *
+        assert_eq!(inner("void *"), "void");
+        assert_eq!(inner("const void *"), "const void");
+    }
+
+    #[test]
+    fn test_c_decl() {
+        // Scalar
+        assert_eq!(c_decl("int", "count"), "int count");
+        assert_eq!(c_decl("uint32_t", "len"), "uint32_t len");
+
+        // One pointer
+        assert_eq!(c_decl("int *", "out"), "int *out");
+
+        // Two pointers
+        assert_eq!(c_decl("char **", "argv"), "char **argv");
+
+        // Const
+        assert_eq!(c_decl("const uint8_t *", "in"), "const uint8_t *in");
+        assert_eq!(c_decl("const char **", "names"), "const char **names");
+
+        // Void *
+        assert_eq!(c_decl("void *", "ptr"), "void *ptr");
+        assert_eq!(c_decl("const void *", "data"), "const void *data");
+
+        // Const char *const *
+        assert_eq!(
+            c_decl("const char *const *", "argv"),
+            "const char *const *argv"
+        );
+    }
 }
