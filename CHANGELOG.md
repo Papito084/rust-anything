@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `enable --only` (and `--partial`) with an unknown name lists the unit's exports after the unknown
+  ones, so the right spelling is in the error (#500, #520 by @Papito084).
 - `package --version` (and MCP `package`'s `version`) is refused before anything is written,
   `--dry-run` included, unless it is `MAJOR.MINOR.PATCH` with an optional `-prerelease`: an empty,
   padded or malformed version used to land in the package and fail only at publish time (#502, #519 by
