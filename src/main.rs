@@ -1184,7 +1184,7 @@ fn run() -> Result<ExitCode> {
                 say!("{}", serde_json::to_string_pretty(&rows)?);
             } else {
                 say!(
-                    "{:<24} {:>6} {:>12} {:>12} {:>9}",
+                    "{:<24} {:>6} {:>12} {:>12} {:>12}",
                     "function",
                     "cases",
                     "orig ns/call",
@@ -1198,12 +1198,12 @@ fn run() -> Result<ExitCode> {
                         ""
                     };
                     say!(
-                        "{:<24} {:>6} {:>12.0} {:>12.0} {:>8.2}x{mark}",
+                        "{:<24} {:>6} {:>12.0} {:>12.0} {:>12}{mark}",
                         r.name,
                         r.cases,
                         r.original_ns,
                         r.rust_ns,
-                        r.speedup
+                        harness::speed_phrase(r.speedup)
                     );
                 }
                 let lang = bridge::Manifest::load(&crate_dir)
@@ -1211,8 +1211,8 @@ fn run() -> Result<ExitCode> {
                     .unwrap_or_default();
                 let v = harness::verdict(&rows, lang);
                 say!(
-                    "\nTimed as callers call it, crossing included. Overall {:.2}x (geometric mean); {} of {} functions at least 1.1x faster.",
-                    v.speedup,
+                    "\nTimed as callers call it, crossing included. Overall {} (geometric mean); {} of {} functions at least 1.1x faster.",
+                    harness::speed_phrase(v.speedup),
                     v.faster.len(),
                     rows.len() - v.left_out.len()
                 );

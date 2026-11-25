@@ -736,6 +736,27 @@ pub fn verdict(rows: &[BenchRow], lang: crate::lang::Lang) -> Verdict {
     }
 }
 
+/// "Nx faster" at or above parity, "Nx slower" below it.
+pub fn speed_phrase(speedup: f64) -> String {
+    if speedup >= 1.0 {
+        // Same rule on the faster side: `1.04x` is not `1.0x`, which reads as no change at all.
+        if speedup < 1.05 {
+            format!("{speedup:.2}x faster")
+        } else {
+            format!("{speedup:.1}x faster")
+        }
+    } else {
+        let slower = 1.0 / speedup.max(1e-9);
+        // A port a few percent behind reads as "1.0x slower" at one decimal, which says it is not
+        // slower at all: below 1.05 the difference gets a second decimal, as `bench` prints it.
+        if slower < 1.05 {
+            format!("{slower:.2}x slower")
+        } else {
+            format!("{slower:.1}x slower")
+        }
+    }
+}
+
 /// Rows from two `{ name: { cases, ns } }` timing maps: the original's and the port's.
 pub fn bench_rows(
     m: &Manifest,
@@ -2689,6 +2710,19 @@ mod verdict_tests {
                 .advice
                 .starts_with("No call overhead")
         );
+    }
+
+    #[test]
+    fn speed_phrase_formats_faster_and_slower() {
+        assert_eq!(speed_phrase(31.42), "31.4x faster");
+        assert_eq!(speed_phrase(1.2), "1.2x faster");
+        assert_eq!(speed_phrase(1.04), "1.04x faster");
+        assert_eq!(speed_phrase(0.97), "1.03x slower");
+        assert_eq!(speed_phrase(0.96), "1.04x slower");
+        assert_eq!(speed_phrase(0.9), "1.1x slower");
+        assert_eq!(speed_phrase(0.5), "2.0x slower");
+        assert_eq!(speed_phrase(0.15), "6.7x slower");
+        assert_eq!(speed_phrase(0.12), "8.3x slower");
     }
 }
 

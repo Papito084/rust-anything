@@ -548,25 +548,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
     Ok(out)
 }
 
-fn times(x: f64) -> String {
-    if x >= 1.0 {
-        // Same rule on the faster side: `1.04x` is not `1.0x`, which reads as no change at all.
-        if x < 1.05 {
-            format!("{x:.2}x faster")
-        } else {
-            format!("{x:.1}x faster")
-        }
-    } else {
-        let slower = 1.0 / x.max(1e-9);
-        // A port a few percent behind reads as "1.0x slower" at one decimal, which says it is not
-        // slower at all: below 1.05 the difference gets a second decimal, as `bench` prints it.
-        if slower < 1.05 {
-            format!("{slower:.2}x slower")
-        } else {
-            format!("{slower:.1}x slower")
-        }
-    }
-}
+pub(crate) use crate::harness::speed_phrase as times;
 
 /// What to do when every case matches but the port, called as its callers call it, loses.
 pub fn slower_advice(pick: &Pick, speedup: f64) -> String {
