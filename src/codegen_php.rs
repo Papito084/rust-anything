@@ -348,3 +348,50 @@ const DRIVER_PHP: &str = r#"namespace {
     }
 }
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qualified_splits_namespaces_and_falls_back_to_name() {
+        let fn_with = |name: &str, prototype: Option<&str>| ExportedFn {
+            name: name.into(),
+            prototype: prototype.map(Into::into),
+            ..Default::default()
+        };
+
+        // Fallback to name when prototype is None
+        assert_eq!(
+            qualified(&fn_with("slugify", None)),
+            (String::new(), "slugify".into())
+        );
+
+        // No namespace in prototype
+        assert_eq!(
+            qualified(&fn_with("slugify", Some("slugify(string $s)"))),
+            (String::new(), "slugify".into())
+        );
+
+        // One level namespace
+        assert_eq!(
+            qualified(&fn_with("slugify", Some(r"Text\slugify(string $s)"))),
+            ("Text".into(), r"Text\slugify".into())
+        );
+
+        // Several levels namespace
+        assert_eq!(
+            qualified(&fn_with("slugify", Some(r"Acme\Text\slugify(string $s)"))),
+            (r"Acme\Text".into(), r"Acme\Text\slugify".into())
+        );
+
+        // Prototype with spaces before '('
+        assert_eq!(
+            qualified(&fn_with(
+                "slugify",
+                Some(r"Acme\Text\slugify   (string $s)")
+            )),
+            (r"Acme\Text".into(), r"Acme\Text\slugify".into())
+        );
+    }
+}

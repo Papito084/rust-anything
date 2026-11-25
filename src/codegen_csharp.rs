@@ -891,6 +891,57 @@ mod tests {
     use super::*;
 
     #[test]
+    fn qualified_splits_namespace_class_method_and_falls_back_to_name() {
+        let fn_with = |name: &str, prototype: Option<&str>| ExportedFn {
+            name: name.into(),
+            prototype: prototype.map(Into::into),
+            ..Default::default()
+        };
+
+        // Fallback to name when prototype is None
+        assert_eq!(
+            qualified(&fn_with("Slugify", None)),
+            (String::new(), String::new(), "Slugify".into())
+        );
+
+        // No namespace, no class
+        assert_eq!(
+            qualified(&fn_with("Slugify", Some("Slugify(string text)"))),
+            (String::new(), String::new(), "Slugify".into())
+        );
+
+        // Class with no namespace
+        assert_eq!(
+            qualified(&fn_with("Slugify", Some("Slug.Slugify(string text)"))),
+            (String::new(), "Slug".into(), "Slugify".into())
+        );
+
+        // One level namespace
+        assert_eq!(
+            qualified(&fn_with("Slugify", Some("Text.Slug.Slugify(string text)"))),
+            ("Text".into(), "Slug".into(), "Slugify".into())
+        );
+
+        // Several levels namespace
+        assert_eq!(
+            qualified(&fn_with(
+                "Slugify",
+                Some("Acme.Text.Slug.Slugify(string text)")
+            )),
+            ("Acme.Text".into(), "Slug".into(), "Slugify".into())
+        );
+
+        // Prototype with spaces before '('
+        assert_eq!(
+            qualified(&fn_with(
+                "Slugify",
+                Some("Acme.Text.Slug.Slugify   (string text)")
+            )),
+            ("Acme.Text".into(), "Slug".into(), "Slugify".into())
+        );
+    }
+
+    #[test]
     fn keeps_unconditional_package_references_without_build_tooling() {
         let project = r#"<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
