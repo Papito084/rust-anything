@@ -269,7 +269,7 @@ Runs the original's code or commands.
 
 Tool `app_record` · CLI `rust-anything app record`
 
-Record a whole CLI or server's behavior (with optional HTTP and SMTP effect sinks): run the original on its own documented examples, an inputs file and semantic traps (non-ASCII and emoji, negative division, overflow, float extremes, map order), twice each. What differs between runs is reported by kind in `noise`: values (now [..] wildcards), order (lines compared in any order) and lines (a ... that matches anything): show every one to the user. Cases are trycmd files in <repo>/rust/app-cases/ for CLIs (argv, stdin, env, files in; stdout, stderr, exit code, files out) or HTTP cases in <repo>/rust/app-cases/http/, with recorded effects alongside.
+Record a whole CLI or server's behavior (with optional HTTP, SMTP and database effects): run the original on its own documented examples, an inputs file and semantic traps (non-ASCII and emoji, negative division, overflow, float extremes, map order), twice each. What differs between runs is reported by kind in `noise`: values (now [..] wildcards), order (lines compared in any order) and lines (a ... that matches anything): show every one to the user. Cases are trycmd files in <repo>/rust/app-cases/ for CLIs (argv, stdin, env, files in; stdout, stderr, exit code, files out) or HTTP cases in <repo>/rust/app-cases/http/, with recorded effects alongside.
 
 Runs the original's code or commands.
 
