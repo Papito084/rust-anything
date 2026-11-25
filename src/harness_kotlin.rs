@@ -278,3 +278,71 @@ pub fn bench(crate_dir: &Path, m: &Manifest, min_ms: u64) -> Result<Vec<BenchRow
     }
     Ok(crate::harness::bench_rows(m, &timings[0], &timings[1]))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn needs_android_sdk_cases() {
+        let dir = crate::app::temp_dir("kotlin-android-sdk").unwrap();
+
+        // A file under src/androidTest/ is true even with no imports
+        let android_test_dir = dir.join("src").join("androidTest");
+        std::fs::create_dir_all(&android_test_dir).unwrap();
+        let test_file = android_test_dir.join("EmptyTest.kt");
+        std::fs::write(&test_file, "class EmptyTest\n").unwrap();
+        assert!(needs_android_sdk(&test_file));
+
+        // import androidx.core.Foo is true
+        let androidx_file = dir.join("AndroidX.kt");
+        std::fs::write(
+            &androidx_file,
+            "package com.example\nimport androidx.core.Foo\n",
+        )
+        .unwrap();
+        assert!(needs_android_sdk(&androidx_file));
+
+        // Indented import android.os.Bundle is true
+        let indented_file = dir.join("Indented.kt");
+        std::fs::write(
+            &indented_file,
+            "package com.example\n    import android.os.Bundle\n",
+        )
+        .unwrap();
+        assert!(needs_android_sdk(&indented_file));
+
+        // import com.google.android. is true
+        let gms_file = dir.join("Gms.kt");
+        std::fs::write(
+            &gms_file,
+            "package com.example\nimport com.google.android.material.button.MaterialButton\n",
+        )
+        .unwrap();
+        assert!(needs_android_sdk(&gms_file));
+
+        // import kotlin.math.abs is false
+        let kotlin_file = dir.join("Math.kt");
+        std::fs::write(
+            &kotlin_file,
+            "package com.example\nimport kotlin.math.abs\n\nfun f(x: Int) = abs(x)\n",
+        )
+        .unwrap();
+        assert!(!needs_android_sdk(&kotlin_file));
+
+        // A comment that mentions import android. mid-line is false
+        let comment_file = dir.join("Comment.kt");
+        std::fs::write(
+            &comment_file,
+            "package com.example\n// note: do not import android.os.Bundle\n/* another import android.widget */\n",
+        )
+        .unwrap();
+        assert!(!needs_android_sdk(&comment_file));
+
+        // A path that does not exist is false
+        let nonexistent = dir.join("does_not_exist.kt");
+        assert!(!needs_android_sdk(&nonexistent));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
