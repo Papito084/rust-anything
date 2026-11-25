@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `gate`'s `size` check and `go`'s "no hot function to port" message say `1 line` and
+  `1 hot function` for one, like `analyze`'s plan (#503, #516 by @Papito084).
 - The `port_unit` and `port_whole_app` MCP prompts strip the skill's front matter when `SKILL.md`
   has CRLF line endings, as on a Windows checkout with `core.autocrlf=true` (#501, #515 by @Papito084).
 - Generated Go, Java, Kotlin and Ruby bridges pass a zero-argument fallible port function straight

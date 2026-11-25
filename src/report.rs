@@ -344,3 +344,17 @@ fn status_label(status: Status) -> &'static str {
         Status::Keep => "keep",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::count;
+
+    #[test]
+    fn one_is_singular_and_everything_else_plural() {
+        assert_eq!(count(1, "line"), "1 line");
+        assert_eq!(count(0, "line"), "0 lines");
+        assert_eq!(count(2, "line"), "2 lines");
+        assert_eq!(count(1, "hot function"), "1 hot function");
+        assert_eq!(count(7, "hot function"), "7 hot functions");
+    }
+}
