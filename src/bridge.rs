@@ -715,7 +715,7 @@ fn keep_reason(keep: &[String], name: &str) -> Option<String> {
     keep.iter().find_map(|k| {
         let (kept, reason) = k
             .split_once(':')
-            .map_or((k.as_str(), ""), |(n, r)| (n.trim(), r.trim()));
+            .map_or((k.trim(), ""), |(n, r)| (n.trim(), r.trim()));
         (kept == name).then(|| {
             if reason.is_empty() {
                 "kept on request".to_string()
@@ -1242,6 +1242,24 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             pair[0].1,
             pair[1].1
         );
+    }
+    let mut known_names: Vec<&str> = exports
+        .iter()
+        .map(|f| f.name.as_str())
+        .chain(classes.iter().map(|c| c.name.as_str()))
+        .chain(js_only.iter().map(|j| j.name.as_str()))
+        .collect();
+    known_names.sort();
+    known_names.dedup();
+    for k in &opts.keep {
+        let name = k.split_once(':').map_or(k.trim(), |(n, _)| n.trim());
+        if !known_names.contains(&name) {
+            bail!(
+                "--keep `{name}` is not an export of {} (exports: {})",
+                unit.id,
+                known_names.join(", ")
+            );
+        }
     }
     if exports.is_empty() && classes.is_empty() && !js_only.is_empty() {
         bail!(
@@ -1952,5 +1970,69 @@ mod tests {
         assert_eq!(snake_case("try"), "r#try");
         assert_eq!(snake_case("self"), "self_");
         assert_eq!(snake_case("Super"), "super_");
+    }
+
+    #[test]
+    fn keep_reason_matches_and_trims() {
+        let keep = vec![
+            "add".into(),
+            "sub: legacy reason".into(),
+            "mul:".into(),
+            "  div  ".into(),
+            "  mod  :  modulo reason  ".into(),
+        ];
+        assert_eq!(
+            keep_reason(&keep, "add").as_deref(),
+            Some("kept on request")
+        );
+        assert_eq!(keep_reason(&keep, "sub").as_deref(), Some("legacy reason"));
+        assert_eq!(
+            keep_reason(&keep, "mul").as_deref(),
+            Some("kept on request")
+        );
+        assert_eq!(
+            keep_reason(&keep, "div").as_deref(),
+            Some("kept on request")
+        );
+        assert_eq!(keep_reason(&keep, "mod").as_deref(), Some("modulo reason"));
+        assert_eq!(keep_reason(&keep, "missing"), None);
+    }
+
+    #[test]
+    fn bridge_refuses_unknown_keep_name() {
+        let dir = crate::app::temp_dir("bridge-keep").unwrap();
+        std::fs::write(
+            dir.join("package.json"),
+            r#"{"name":"demo","version":"1.0.0"}"#,
+        )
+        .unwrap();
+        std::fs::create_dir_all(dir.join("src")).unwrap();
+        std::fs::write(
+            dir.join("src/add.ts"),
+            "export function add(a: number, b: number): number { return a + b; }\n",
+        )
+        .unwrap();
+        let out = dir.join("rust/add-rs");
+        let err = bridge(&Options {
+            root: &dir,
+            unit: "src/add.ts",
+            kind: Some(Kind::Napi),
+            out: Some(out.clone()),
+            name: None,
+            force: false,
+            lang: None,
+            keep: vec!["nope".into()],
+            batch: vec![],
+            allocator: Allocator::default(),
+            as_json: vec![],
+        })
+        .unwrap_err();
+        assert!(
+            format!("{err:#}")
+                .contains("--keep `nope` is not an export of src/add.ts (exports: add)"),
+            "{err:#}"
+        );
+        assert!(!out.exists());
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
