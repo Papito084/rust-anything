@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- `package --version` (and MCP `package`'s `version`) is refused before anything is written,
+  `--dry-run` included, unless it is `MAJOR.MINOR.PATCH` with an optional `-prerelease`: an empty,
+  padded or malformed version used to land in the package and fail only at publish time (#502, #519 by
+  @alvaroalonsoparrondo-a11y).
+- `gate`'s `size` check and `go`'s "no hot function to port" message say `1 line` and
+  `1 hot function` for one, like `analyze`'s plan (#503, #516 by @Papito084).
+- The `port_unit` and `port_whole_app` MCP prompts strip the skill's front matter when `SKILL.md`
+  has CRLF line endings, as on a Windows checkout with `core.autocrlf=true` (#501, #515 by @Papito084).
+- Generated Go, Java, Kotlin and Ruby bridges pass a zero-argument fallible port function straight
+  to `run`/`guard` (`run(port::pong)`) instead of wrapping it in a closure, so freshly bridged code
+  passes `gate`'s clippy `redundant_closure` check again (#310, #487 by @Lewandox).
+- `app record --no-http` turns a saved server recording back into a CLI, `--no-args` and
+  `--no-fresh` clear the saved `--arg` and `--fresh` lists (removing an unused snapshot), and
+  `--port 0` drops a saved fixed port; MCP `app_record` takes `http: false`, `args: []`, `fresh: []`
+  and `port: 0` the same way. A new run command re-infers an inferred app name, while one given
+  with `--name` is kept (#330, #486 by @Lewandox).
 - `app record --timeout 0` and `app replay --timeout 0` (and MCP `app_record` / `app_replay` with
   `timeout: 0`) are refused before anything runs, instead of killing every run at once; a saved
   `timeout_secs` of 0 is refused too, with a hint to pass `--timeout` (#497, #514 by @aloneangel45).

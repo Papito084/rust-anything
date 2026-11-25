@@ -520,23 +520,37 @@ enum AppCmd {
         timeout: Option<u64>,
         /// The app is a server: the command starts it, taking its port from PORT or `{port}`;
         /// cases are requests (curl lines in its docs, `--inputs`, traps), kept in `http/`.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "no_http")]
         http: bool,
-        /// A port the server always listens on (implies --http).
+        /// Drop a saved server recording and record as a CLI again.
+        #[arg(long, conflicts_with_all = ["http", "port", "server_args", "pace", "ready_timeout"])]
+        no_http: bool,
+        /// A port the server always listens on (implies --http); 0 removes a saved port.
         #[arg(long)]
         port: Option<u16>,
         /// An argument every server start gets after its command, the original's and every
         /// build's, so the Rust binary is started as the original is (`--arg db.json`).
         /// Repeatable; implies --http; saved with the cases.
-        #[arg(long = "arg", value_name = "ARG", allow_hyphen_values = true)]
+        #[arg(
+            long = "arg",
+            value_name = "ARG",
+            allow_hyphen_values = true,
+            conflicts_with = "no_args"
+        )]
         server_args: Vec<String>,
+        /// Clear the saved `--arg` server arguments.
+        #[arg(long = "no-args", alias = "no-arg", conflicts_with = "server_args")]
+        no_args: bool,
         /// A file or folder of the repository the app reads or writes (a project tree, a
         /// database file, a public folder): snapshotted into `files/` (`http/files/` for a
         /// server) and copied into a fresh working directory before every case (CLIs) or start
         /// (servers). A CLI's written files are what differs from it afterwards, and the files
         /// it removed are compared too. Repeatable; saved with the cases.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "no_fresh")]
         fresh: Vec<String>,
+        /// Clear the saved `--fresh` paths and remove the saved snapshot.
+        #[arg(long, conflicts_with = "fresh")]
+        no_fresh: bool,
         /// Milliseconds to wait after each response before the next request, for work a server
         /// does after answering (a file watcher reloading what it just wrote). Implies --http;
         /// saved with the cases and used by replay; 0 removes it.
@@ -1568,9 +1582,12 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             no_traps,
             timeout,
             http,
+            no_http,
             port,
             server_args,
+            no_args,
             fresh,
+            no_fresh,
             pace,
             ready_timeout,
             float_tolerance,
@@ -1599,10 +1616,28 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 name: name.as_deref(),
                 traps: !no_traps,
                 timeout_secs: timeout,
-                http,
+                http: if http {
+                    Some(true)
+                } else if no_http {
+                    Some(false)
+                } else {
+                    None
+                },
                 port,
-                server_args: &server_args,
-                fresh: &fresh,
+                server_args: if no_args {
+                    Some(&[])
+                } else if server_args.is_empty() {
+                    None
+                } else {
+                    Some(&server_args)
+                },
+                fresh: if no_fresh {
+                    Some(&[])
+                } else if fresh.is_empty() {
+                    None
+                } else {
+                    Some(&fresh)
+                },
                 pace_ms: pace,
                 float_tolerance,
                 float_files: &float_files,

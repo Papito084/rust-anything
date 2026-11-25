@@ -282,15 +282,15 @@ Runs the original's code or commands.
 | `name` | string |  | Name the app is invoked by in its docs. |
 | `timeout` | integer |  | Seconds before a run is killed (default 30). |
 | `traps` | boolean |  | Add semantic-trap cases (default true). |
-| `http` | boolean |  | The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({"name", "method", "path", "headers", "body" \| "body_base64" \| "body_file"}) and traps. |
-| `port` | integer |  | A port the server always listens on (implies http). |
+| `http` | boolean |  | The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({"name", "method", "path", "headers", "body" \| "body_base64" \| "body_file"}) and traps. Pass `false` to drop a saved server recording and record as a CLI again. |
+| `port` | integer |  | A port the server always listens on (implies http); 0 removes a saved fixed port. |
 | `effects` | string[] |  | Record what leaves the process: "http" (a local sink set as HTTP_PROXY, http_proxy and RUST_ANYTHING_HTTP_SINK), "smtp" (a local mail server, SMTP_HOST and SMTP_PORT, recording decoded headers and MIME parts) and "smtp-raw" (raw MIME DATA). Each case stores what reached them, in order, and replay compares it. |
 | `effect_env` | string[] |  | Point the app's own settings at a sink: VAR=http-url, VAR=smtp-host, VAR=smtp-port or VAR=smtp-url. |
 | `effect_response` | string[] |  | Canned responses for the HTTP effect sink: "METHOD /path=STATUS [BODY\|@FILE]" (e.g. "POST /v1/charges=201 @fixtures/charge.json", "POST /hooks/*=500"). Matched in order with `*` wildcards, falling back to `200 {}`. Enables the outbound HTTP effect (`effects: ["http"]`, not server mode); saved for replay. |
 | `db_reset` | string |  | Shell command that resets the database before each case (each start for servers), run in the folder the case runs in; a script it names by a relative path with a script extension (.py, .sh, .js, .ts, .rb, .php, .pl, .ps1, .bat, .cmd, .sql and similar) is the repository's, while other relative paths, extensionless scripts included, are the case folder's. Cases then run one at a time. |
 | `db_dump` | string |  | Shell command that prints the database's state (e.g. `sqlite3 app.db .dump`), run after each case or request in the folder the case runs in, and recorded with the effects. |
-| `args` | string[] |  | Servers: arguments every start gets after its command, the original's and every build's (["db.json"]). Implies http; saved. |
-| `fresh` | string[] |  | Repository files or folders the app reads or writes (a project tree, a database file), snapshotted and copied into a fresh working directory before every case (CLIs) or start (servers); a CLI's removed files are compared too. Saved. |
+| `args` | string[] |  | Servers: arguments every start gets after its command, the original's and every build's (["db.json"]). Non-empty implies http; saved. Pass `[]` to clear saved args. |
+| `fresh` | string[] |  | Repository files or folders the app reads or writes (a project tree, a database file), snapshotted and copied into a fresh working directory before every case (CLIs) or start (servers); a CLI's removed files are compared too. Saved. Pass `[]` to clear saved paths. |
 | `pace` | integer |  | Servers: milliseconds to wait after each response, for work the server does after answering (a file watcher). Implies http; saved and used by replay; 0 removes it. |
 | `ready_timeout` | integer |  | Servers: seconds to wait for the port before giving up (default 60). Implies http; saved with the cases and used by replay and the front door; 0 restores the default. |
 | `float_tolerance` | number |  | Numeric output: numbers match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the cases; 0 removes it. |

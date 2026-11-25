@@ -66,9 +66,9 @@ fn record(repo: &Path, run: &str, traps: bool) -> app::RecordOutcome {
         name: None,
         traps,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: None,
         float_tolerance: None,
@@ -118,9 +118,9 @@ fn a_port_that_is_taken_is_named_before_the_build_runs() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: Some(port),
         float_tolerance: None,
@@ -159,9 +159,9 @@ fn a_ready_timeout_shortens_the_wait_for_a_server_that_never_listens() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: None,
         float_tolerance: None,
@@ -203,9 +203,9 @@ fn a_build_that_exits_before_listening_says_so() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: None,
         float_tolerance: None,
@@ -248,9 +248,9 @@ fn http_record_keeps_distinct_requests_with_the_same_name() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: None,
         float_tolerance: None,
@@ -311,10 +311,10 @@ fn http_fresh_files_and_arguments_reach_every_start() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: false,
+        http: None,
         port: None,
-        server_args: &["data/count.txt".to_string()],
-        fresh: &["data".to_string()],
+        server_args: Some(&["data/count.txt".to_string()]),
+        fresh: Some(&["data".to_string()]),
         pace_ms: Some(5),
         float_tolerance: None,
         float_files: &[],
@@ -376,9 +376,9 @@ fn http_rerecord_uses_the_existing_fixed_port() {
             name: None,
             traps: false,
             timeout_secs: None,
-            http: true,
-            server_args: &[],
-            fresh: &[],
+            http: Some(true),
+            server_args: None,
+            fresh: None,
             pace_ms: None,
             port,
             float_tolerance: None,
@@ -810,9 +810,9 @@ fn http_fixed_port_rejects_existing_listener_and_early_exit() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: Some(port),
         float_tolerance: None,
@@ -838,9 +838,9 @@ fn http_fixed_port_rejects_existing_listener_and_early_exit() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: Some(port),
         float_tolerance: None,
@@ -930,9 +930,9 @@ fn a_server_listening_only_on_ipv6_loopback_is_recorded_and_replayed() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: None,
         float_tolerance: None,
@@ -1019,9 +1019,9 @@ fn a_server_started_through_a_wrapper_is_stopped_with_it() {
         name: None,
         traps: false,
         timeout_secs: None,
-        http: true,
-        server_args: &[],
-        fresh: &[],
+        http: Some(true),
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         port: Some(port),
         float_tolerance: None,
@@ -1249,10 +1249,10 @@ http.server.HTTPServer(("127.0.0.1", port), H).serve_forever()
         name: Some("upload"),
         traps: false,
         timeout_secs: Some(15),
-        http: true,
+        http: Some(true),
         port: None,
-        server_args: &[],
-        fresh: &[],
+        server_args: None,
+        fresh: None,
         pace_ms: None,
         float_tolerance: None,
         float_files: &[],
@@ -1277,6 +1277,242 @@ http.server.HTTPServer(("127.0.0.1", port), H).serve_forever()
     })
     .unwrap();
     assert_eq!((rep.passed, rep.total), (3, 3), "{:?}", rep.failures);
+
+    std::fs::remove_dir_all(&repo).unwrap();
+}
+
+#[test]
+fn server_recording_can_clear_args_fresh_and_return_to_cli() {
+    let Some(python) = common::python() else {
+        return;
+    };
+    let repo = std::env::temp_dir().join(format!(
+        "rust-anything-http-back-to-cli-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&repo);
+    std::fs::create_dir_all(repo.join("data")).unwrap();
+    std::fs::write(repo.join("data/msg.txt"), "hello").unwrap();
+    std::fs::write(
+        repo.join("server.py"),
+        r#"import http.server, os, sys
+arg = sys.argv[1] if len(sys.argv) > 1 else "none"
+has_data = os.path.isfile("data/msg.txt")
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = f"{arg}:{has_data}".encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *args):
+        pass
+http.server.HTTPServer(("127.0.0.1", int(os.environ["PORT"])), H).serve_forever()
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        repo.join("cli.py"),
+        "import os, sys\nprint('cli:' + ':'.join(sys.argv[1:]) + f':{os.path.isfile(\"data/msg.txt\")}')\n",
+    )
+    .unwrap();
+    std::fs::write(
+        repo.join("http_in.jsonl"),
+        "{\"name\":\"root\",\"path\":\"/\"}\n",
+    )
+    .unwrap();
+    std::fs::write(
+        repo.join("cli_in.jsonl"),
+        "{\"name\":\"greet\",\"args\":[\"hi\"]}\n",
+    )
+    .unwrap();
+
+    // 1. Record as a server with --arg, --fresh, and a fixed port.
+    let port = rust_anything::http::free_port().unwrap();
+    let rec1 = app::record(&RecordOptions {
+        repo: &repo,
+        run: &[python.to_string(), "server.py".to_string()],
+        inputs: Some(&repo.join("http_in.jsonl")),
+        normalize: &[],
+        name: None,
+        traps: false,
+        timeout_secs: Some(15),
+        http: Some(true),
+        port: Some(port),
+        server_args: Some(&["mode-a".to_string()]),
+        fresh: Some(&["data".to_string()]),
+        pace_ms: None,
+        float_tolerance: None,
+        float_files: &[],
+        effects: None,
+        ready_secs: None,
+    })
+    .unwrap();
+    assert_eq!(rec1.cases, 1);
+    assert_eq!(
+        std::fs::read_to_string(rec1.dir.join("root.body")).unwrap(),
+        "mode-a:True"
+    );
+    assert!(
+        app::cases_dir(&repo)
+            .join("http/files/data/msg.txt")
+            .is_file()
+    );
+    let cfg1 = app::Config::load(&repo).unwrap().unwrap();
+    assert_eq!(cfg1.name, "server");
+    let http1 = cfg1.http.unwrap();
+    assert_eq!(http1.port, Some(port));
+    assert_eq!(http1.args, ["mode-a"]);
+    assert_eq!(http1.fresh, ["data"]);
+
+    // 2. Clear saved --arg, --fresh, and fixed --port on the server via CLI flags.
+    let status = std::process::Command::new(env!("CARGO_BIN_EXE_rust-anything"))
+        .args(["app", "record"])
+        .arg(&repo)
+        .args([
+            "--no-traps",
+            "--no-args",
+            "--no-fresh",
+            "--port",
+            "0",
+            "--inputs",
+        ])
+        .arg(repo.join("http_in.jsonl"))
+        .output()
+        .unwrap();
+    assert!(
+        status.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&status.stdout),
+        String::from_utf8_lossy(&status.stderr)
+    );
+    let cfg2 = app::Config::load(&repo).unwrap().unwrap();
+    let http2 = cfg2.http.unwrap();
+    assert_eq!(http2.port, None);
+    assert!(http2.args.is_empty(), "{:?}", http2.args);
+    assert!(http2.fresh.is_empty(), "{:?}", http2.fresh);
+    assert!(!app::cases_dir(&repo).join("http/files").exists());
+    assert_eq!(
+        std::fs::read_to_string(app::cases_dir(&repo).join("http/root.body")).unwrap(),
+        "none:True"
+    );
+
+    // 3. Switch the same repo back to a CLI with --no-http and a CLI --fresh, then clear --fresh.
+    let back = std::process::Command::new(env!("CARGO_BIN_EXE_rust-anything"))
+        .args(["app", "record"])
+        .arg(&repo)
+        .args(["--no-http", "--no-traps", "--fresh", "data", "--inputs"])
+        .arg(repo.join("cli_in.jsonl"))
+        .args(["--", python, "cli.py"])
+        .output()
+        .unwrap();
+    assert!(
+        back.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&back.stdout),
+        String::from_utf8_lossy(&back.stderr)
+    );
+    let cfg3 = app::Config::load(&repo).unwrap().unwrap();
+    assert!(cfg3.http.is_none(), "{:?}", cfg3.http);
+    assert_eq!(cfg3.name, "cli");
+    assert_eq!(cfg3.fresh, ["data"]);
+    assert!(app::cases_dir(&repo).join("files/data/msg.txt").is_file());
+    assert_eq!(
+        std::fs::read_to_string(app::cases_dir(&repo).join("greet.stdout"))
+            .unwrap()
+            .trim(),
+        "cli:hi:True"
+    );
+    let rep3 = replay(&repo, None);
+    assert_eq!((rep3.passed, rep3.total), (1, 1), "{:?}", rep3.failures);
+
+    // 3b. A failed recording with `--no-fresh` must leave the previous snapshot replayable.
+    let failed_clear = app::record(&RecordOptions {
+        repo: &repo,
+        run: &["nonexistent-rust-anything-binary-for-test".to_string()],
+        inputs: Some(&repo.join("cli_in.jsonl")),
+        normalize: &[],
+        name: None,
+        traps: false,
+        timeout_secs: Some(15),
+        http: None,
+        port: None,
+        server_args: None,
+        fresh: Some(&[]),
+        pace_ms: None,
+        float_tolerance: None,
+        float_files: &[],
+        effects: None,
+        ready_secs: None,
+    });
+    assert!(failed_clear.is_err());
+    assert!(app::cases_dir(&repo).join("files/data/msg.txt").is_file());
+    let rep3b = replay(&repo, None);
+    assert_eq!((rep3b.passed, rep3b.total), (1, 1), "{:?}", rep3b.failures);
+
+    // 4. Clear the CLI --fresh list and verify the snapshot folder is removed.
+    let clear_cli_fresh = std::process::Command::new(env!("CARGO_BIN_EXE_rust-anything"))
+        .args(["app", "record"])
+        .arg(&repo)
+        .args(["--no-traps", "--no-fresh", "--inputs"])
+        .arg(repo.join("cli_in.jsonl"))
+        .output()
+        .unwrap();
+    assert!(
+        clear_cli_fresh.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&clear_cli_fresh.stdout),
+        String::from_utf8_lossy(&clear_cli_fresh.stderr)
+    );
+    let cfg4 = app::Config::load(&repo).unwrap().unwrap();
+    assert!(cfg4.http.is_none());
+    assert!(cfg4.fresh.is_empty(), "{:?}", cfg4.fresh);
+    assert!(!app::cases_dir(&repo).join("files").exists());
+    assert_eq!(
+        std::fs::read_to_string(app::cases_dir(&repo).join("greet.stdout"))
+            .unwrap()
+            .trim(),
+        "cli:hi:False"
+    );
+    let rep4 = replay(&repo, None);
+    assert_eq!((rep4.passed, rep4.total), (1, 1), "{:?}", rep4.failures);
+
+    // 5. A handwritten case whose `fs.base` points at `files` must keep `cases/files` intact
+    // when recording without `--fresh`.
+    let dir = app::cases_dir(&repo);
+    std::fs::create_dir_all(dir.join("files")).unwrap();
+    std::fs::write(dir.join("files/keep.txt"), "kept\n").unwrap();
+    std::fs::copy(dir.join("greet.toml"), dir.join("hand.toml")).unwrap();
+    let hand_toml = std::fs::read_to_string(dir.join("hand.toml")).unwrap();
+    std::fs::write(
+        dir.join("hand.toml"),
+        hand_toml.replace(
+            "fs.sandbox = true",
+            "fs.sandbox = true\nfs.base = \"files\"",
+        ),
+    )
+    .unwrap();
+    std::fs::copy(dir.join("greet.stdout"), dir.join("hand.stdout")).unwrap();
+    std::fs::copy(dir.join("greet.stderr"), dir.join("hand.stderr")).unwrap();
+    let keep_hand = std::process::Command::new(env!("CARGO_BIN_EXE_rust-anything"))
+        .args(["app", "record"])
+        .arg(&repo)
+        .args(["--no-traps", "--no-fresh", "--inputs"])
+        .arg(repo.join("cli_in.jsonl"))
+        .output()
+        .unwrap();
+    assert!(
+        keep_hand.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&keep_hand.stdout),
+        String::from_utf8_lossy(&keep_hand.stderr)
+    );
+    assert!(
+        dir.join("files/keep.txt").is_file(),
+        "handwritten case reading `files` via fs.base lost its inputs"
+    );
+    let rep5 = replay(&repo, None);
+    assert_eq!((rep5.passed, rep5.total), (2, 2), "{:?}", rep5.failures);
 
     std::fs::remove_dir_all(&repo).unwrap();
 }
