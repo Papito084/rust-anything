@@ -38,6 +38,9 @@ fn fix_for(check: &Check, crate_dir: &Path) -> Option<String> {
                 .into()
         }
         "size" => "use the crates `rust-anything analyze` lists and fold repeated code".into(),
+        "build" if check.detail.contains("not found on PATH") => {
+            "install Rust from https://rustup.rs, or run `rust-anything doctor`".into()
+        }
         "build" => format!("fix the compile error above, then `rust-anything build {c}`"),
         "recording" => format!("rust-anything record {c}"),
         "behavior" if check.detail.contains("no recorded cases") => {
@@ -630,6 +633,21 @@ mod tests {
             Some("rust-anything record port")
         );
         assert!(fix_for(&check("fmt", ""), dir).is_some_and(|f| f.starts_with("cargo fmt")));
+        assert_eq!(
+            fix_for(
+                &check(
+                    "build",
+                    "`cargo` not found on PATH; install Rust from https://rustup.rs, or run `rust-anything doctor`"
+                ),
+                dir
+            )
+            .as_deref(),
+            Some("install Rust from https://rustup.rs, or run `rust-anything doctor`")
+        );
+        assert_eq!(
+            fix_for(&check("build", "compile error: expected `;`"), dir).as_deref(),
+            Some("fix the compile error above, then `rust-anything build port`")
+        );
         assert_eq!(fix_for(&check("coverage", ""), dir), None);
     }
 

@@ -217,6 +217,22 @@ pub(crate) fn install_command(name: &str) -> Option<String> {
     runtime_fix(r, Status::Outdated, Platform::HERE)
 }
 
+/// How to install a missing runtime by name.
+pub(crate) fn missing_hint(name: &str) -> String {
+    if name == "cargo" {
+        "install Rust from https://rustup.rs, or run `rust-anything doctor`".into()
+    } else if let Some(cmd) = RUNTIMES
+        .iter()
+        .find(|r| r.name == name)
+        .and_then(|r| runtime_fix(r, Status::Missing, Platform::HERE))
+    {
+        let cmd = cmd.lines().next().unwrap_or(&cmd);
+        format!("run `{cmd}`, or run `rust-anything doctor`")
+    } else {
+        "run `rust-anything doctor`".into()
+    }
+}
+
 /// The oldest version of a runtime that `doctor` accepts, by its name.
 pub(crate) fn minimum(name: &str) -> Option<Version> {
     RUNTIMES.iter().find(|r| r.name == name)?.minimum

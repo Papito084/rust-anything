@@ -1895,9 +1895,21 @@ pub(crate) fn scratch_cwd(cmd: &mut Command) -> Result<Option<Scratch>> {
     Ok(Some(Scratch(dir)))
 }
 
-fn run(cmd: &mut Command, what: &str) -> Result<()> {
+pub(crate) fn not_found_error(program: &str) -> anyhow::Error {
+    let hint = crate::doctor::missing_hint(program);
+    anyhow::anyhow!("`{program}` not found on PATH; {hint}")
+}
+
+pub(crate) fn run(cmd: &mut Command, what: &str) -> Result<()> {
     let _scratch = scratch_cwd(cmd)?;
-    let output = cmd.output().with_context(|| format!("running {what}"))?;
+    let output = match cmd.output() {
+        Ok(out) => out,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            let prog = cmd.get_program().to_string_lossy();
+            return Err(not_found_error(&prog));
+        }
+        Err(err) => return Err(err).with_context(|| format!("running {what}")),
+    };
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let tail: Vec<&str> = stderr.lines().rev().take(25).collect();
@@ -2648,6 +2660,28 @@ mod verdict_tests {
             verdict(&[row("a", 0.5)], crate::lang::Lang::C)
                 .advice
                 .starts_with("No call overhead")
+        );
+    }
+
+    #[test]
+    fn run_reports_missing_program_cleanly() {
+        let mut cmd = Command::new("nonexistent-program-xyz");
+        let err = run(&mut cmd, "nonexistent").unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("`nonexistent-program-xyz` not found on PATH"),
+            "{msg}"
+        );
+        assert!(msg.contains("run `rust-anything doctor`"), "{msg}");
+    }
+
+    #[test]
+    fn not_found_cargo_names_rustup_and_doctor() {
+        let err = not_found_error("cargo");
+        let msg = err.to_string();
+        assert_eq!(
+            msg,
+            "`cargo` not found on PATH; install Rust from https://rustup.rs, or run `rust-anything doctor`"
         );
     }
 }

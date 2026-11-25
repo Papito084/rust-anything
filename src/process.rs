@@ -96,8 +96,14 @@ fn spawn_with(cmd: &mut Command, stdin: Stdio) -> Result<Child> {
         use std::os::unix::process::CommandExt as _;
         cmd.process_group(0);
     }
-    cmd.spawn()
-        .with_context(|| format!("running `{}`", shown(cmd)))
+    match cmd.spawn() {
+        Ok(child) => Ok(child),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            let prog = cmd.get_program().to_string_lossy();
+            Err(crate::harness::not_found_error(&prog))
+        }
+        Err(err) => Err(err).with_context(|| format!("running `{}`", shown(cmd))),
+    }
 }
 
 fn drain(stream: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {

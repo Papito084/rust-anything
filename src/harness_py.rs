@@ -98,18 +98,11 @@ pub fn record(crate_dir: &Path, cases: &[Value]) -> Result<PathBuf> {
 
 pub fn build(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
     let target = crate::cache::target_for(crate_dir)?.dir;
-    let output = Command::new("cargo")
-        .args(["build", "--release", "--manifest-path"])
+    let mut cmd = Command::new("cargo");
+    cmd.args(["build", "--release", "--manifest-path"])
         .arg(crate_dir.join("Cargo.toml"))
-        .env("CARGO_TARGET_DIR", &target)
-        .output()
-        .context("running cargo build")?;
-    if !output.status.success() {
-        bail!(
-            "cargo build failed:\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+        .env("CARGO_TARGET_DIR", &target);
+    crate::harness::run(&mut cmd, "cargo build")?;
     let lib = manifest.lib_name();
     let release = target.join("release");
     let built = [
