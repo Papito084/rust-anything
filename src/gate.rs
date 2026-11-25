@@ -597,7 +597,7 @@ fn unsafe_blocks(src: &Path) -> (Vec<String>, usize) {
             let text = std::fs::read_to_string(&path).unwrap_or_default();
             let lines: Vec<&str> = text.lines().collect();
             for (i, line) in lines.iter().enumerate() {
-                let code = line.split("//").next().unwrap_or("");
+                let code = strip_code(line);
                 let uses_unsafe = code
                     .split(|c: char| !(c.is_alphanumeric() || c == '_'))
                     .any(|word| word == "unsafe");
@@ -623,6 +623,110 @@ fn unsafe_blocks(src: &Path) -> (Vec<String>, usize) {
 fn last_lines(text: &str, n: usize) -> String {
     let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
     lines[lines.len().saturating_sub(n)..].join("\n")
+}
+
+/// Strips string and char literals and comments from a line of Rust source code so keyword
+/// searches (like `unsafe`) only match real code, not strings or comments.
+fn strip_code(line: &str) -> String {
+    let bytes = line.as_bytes();
+    let mut out = String::with_capacity(line.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        // Line comment: everything from here to end of line is ignored.
+        if bytes[i..].starts_with(b"//") {
+            break;
+        }
+
+        // Block comment: /* ... */
+        if bytes[i..].starts_with(b"/*") {
+            i += 2;
+            while i < bytes.len() && !bytes[i..].starts_with(b"*/") {
+                i += 1;
+            }
+            if i < bytes.len() {
+                i += 2;
+            }
+            out.push(' ');
+            continue;
+        }
+
+        // Raw string: optional 'b' or 'c', then 'r', zero or more '#', then '"'.
+        let prev_is_ident = i > 0 && (bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_');
+        let mut j = i;
+        if !prev_is_ident
+            && (bytes[j] == b'b' || bytes[j] == b'c')
+            && j + 1 < bytes.len()
+            && bytes[j + 1] == b'r'
+        {
+            j += 1;
+        }
+        if !prev_is_ident && bytes[j] == b'r' {
+            let mut k = j + 1;
+            while k < bytes.len() && bytes[k] == b'#' {
+                k += 1;
+            }
+            if k < bytes.len() && bytes[k] == b'"' {
+                let hashes = k - (j + 1);
+                i = k + 1;
+                while i < bytes.len() {
+                    if bytes[i] == b'"' {
+                        let rest = &bytes[i + 1..];
+                        if rest.len() >= hashes && rest[..hashes].iter().all(|&b| b == b'#') {
+                            i += 1 + hashes;
+                            break;
+                        }
+                    }
+                    i += 1;
+                }
+                out.push(' ');
+                continue;
+            }
+        }
+
+        // Standard string: optional 'b' or 'c', then '"'.
+        let is_byte_or_c_str = !prev_is_ident
+            && (bytes[i] == b'b' || bytes[i] == b'c')
+            && i + 1 < bytes.len()
+            && bytes[i + 1] == b'"';
+        if bytes[i] == b'"' || is_byte_or_c_str {
+            if is_byte_or_c_str {
+                i += 1;
+            }
+            i += 1; // skip opening '"'
+            while i < bytes.len() {
+                if bytes[i] == b'\\' {
+                    i += if i + 1 < bytes.len() { 2 } else { 1 };
+                } else if bytes[i] == b'"' {
+                    i += 1;
+                    break;
+                } else {
+                    i += 1;
+                }
+            }
+            out.push(' ');
+            continue;
+        }
+
+        // Char literal: 'x', '\n', '\'', etc.
+        let is_byte_char =
+            !prev_is_ident && bytes[i] == b'b' && i + 1 < bytes.len() && bytes[i + 1] == b'\'';
+        if bytes[i] == b'\'' || is_byte_char {
+            let quote_pos = if is_byte_char { i + 1 } else { i };
+            let rest = &line[quote_pos + 1..];
+            if let Some(close_rel) = rest.find('\'')
+                && close_rel <= 8
+                && !rest[..close_rel].contains(' ')
+            {
+                i = quote_pos + 1 + close_rel + 1;
+                out.push(' ');
+                continue;
+            }
+        }
+
+        out.push(bytes[i] as char);
+        i += 1;
+    }
+    out
 }
 
 #[cfg(test)]
@@ -707,14 +811,43 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("a.rs"),
-            "#![forbid(unsafe_code)]\n// SAFETY: checked above\nunsafe { x() }\nlet y = unsafe { z() };\n// unsafe in a comment\n",
+            "#![forbid(unsafe_code)]\n\
+             // SAFETY: checked above\n\
+             unsafe { x() }\n\
+             let y = unsafe { z() };\n\
+             // unsafe in a comment\n\
+             let _err = Err(\"RangeError: unsafe input\".into());\n\
+             let _raw = r#\"unsafe \"quoted\" string\"#;\n\
+             let _with_real = \"a string with unsafe\"; unsafe { real_work() };\n",
         )
         .unwrap();
         let (unexplained, explained) = unsafe_blocks(&dir);
         std::fs::remove_dir_all(&dir).unwrap();
         assert_eq!(explained, 1);
-        assert_eq!(unexplained.len(), 1);
-        assert!(unexplained[0].ends_with("a.rs:4"));
+        assert_eq!(unexplained.len(), 2);
+        assert!(unexplained[0].ends_with("a.rs:4"), "{}", unexplained[0]);
+        assert!(unexplained[1].ends_with("a.rs:8"), "{}", unexplained[1]);
+    }
+
+    #[test]
+    fn strip_code_removes_strings_chars_and_comments() {
+        assert_eq!(super::strip_code("// unsafe comment").trim(), "");
+        assert_eq!(
+            super::strip_code("let s = \"unsafe inside string\";"),
+            "let s =  ;"
+        );
+        assert_eq!(
+            super::strip_code("let s = r#\"unsafe in raw\"#;"),
+            "let s =  ;"
+        );
+        assert_eq!(
+            super::strip_code("let s = \"unsafe\"; unsafe { }"),
+            "let s =  ; unsafe { }"
+        );
+        assert_eq!(
+            super::strip_code("let s = \"http://example.com\"; unsafe { }"),
+            "let s =  ; unsafe { }"
+        );
     }
 
     #[test]
