@@ -200,7 +200,7 @@ OpenCode-y el bilen birikdirmek üçin serweri `~/.config/opencode/opencode.json
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
 rust-anything bridge . src/fuzzy.ts --batch fuzzyScore:text
-# write src/port.rs (or let your agent), then:
+# src/port.rs ýazyň (ýa-da agentiňize ýazdyryň), soňra:
 rust-anything record rust/fuzzy-rs && rust-anything build rust/fuzzy-rs
 rust-anything diff rust/fuzzy-rs                       # every recorded case must match
 rust-anything bench rust/fuzzy-rs                      # faster? the verdict says

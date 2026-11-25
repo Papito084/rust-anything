@@ -201,7 +201,7 @@ OpenCode'ду кол менен туташтыруу үчүн серверди `
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
 rust-anything bridge . src/fuzzy.ts --batch fuzzyScore:text
-# write src/port.rs (or let your agent), then:
+# src/port.rs жазыңыз (же агентиңизге жаздырыңыз), андан кийин:
 rust-anything record rust/fuzzy-rs && rust-anything build rust/fuzzy-rs
 rust-anything diff rust/fuzzy-rs                       # every recorded case must match
 rust-anything bench rust/fuzzy-rs                      # faster? the verdict says
