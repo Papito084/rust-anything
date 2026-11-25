@@ -522,3 +522,199 @@ fn record_count_zero_with_inputs_records_only_given_cases() {
     );
     assert_eq!(cases.lines().count(), 1, "{cases}");
 }
+
+#[test]
+fn record_inputs_rejects_missing_or_non_array_args() {
+    let dir =
+        std::env::temp_dir().join(format!("rust-anything-inputs-args-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let manifest_json = serde_json::json!({
+        "schema": "rust-anything/bridge@1",
+        "root": ".",
+        "unit": "math.ts",
+        "language": "ts",
+        "kind": "napi",
+        "crate_name": "math-rs",
+        "exports": [
+            {
+                "name": "add",
+                "file": "math.ts",
+                "line": 1,
+                "params": [],
+                "returns": "number",
+                "is_async": false,
+                "is_generator": false,
+                "type_params": [],
+                "uses_instanceof": false
+            }
+        ]
+    });
+    std::fs::write(
+        dir.join(rust_anything::bridge::MANIFEST),
+        manifest_json.to_string(),
+    )
+    .unwrap();
+
+    // 1. Missing args
+    let in_file = dir.join("in_missing.jsonl");
+    std::fs::write(&in_file, "{\"fn\":\"add\"}\n").unwrap();
+    let err = rust_anything::harness::record(&rust_anything::harness::RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: Some(&in_file),
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        format!(
+            "{}:1: \"args\" must be an array of arguments",
+            in_file.display()
+        )
+    );
+
+    // 2. Non-array args (string)
+    let in_file2 = dir.join("in_str.jsonl");
+    std::fs::write(&in_file2, "{\"fn\":\"add\",\"args\":\"oops\"}\n").unwrap();
+    let err = rust_anything::harness::record(&rust_anything::harness::RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: Some(&in_file2),
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        format!(
+            "{}:1: \"args\" must be an array of arguments",
+            in_file2.display()
+        )
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn record_inputs_rejects_missing_fn() {
+    let dir =
+        std::env::temp_dir().join(format!("rust-anything-inputs-no-fn-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let manifest_json = serde_json::json!({
+        "schema": "rust-anything/bridge@1",
+        "root": ".",
+        "unit": "math.ts",
+        "language": "ts",
+        "kind": "napi",
+        "crate_name": "math-rs",
+        "exports": [
+            {
+                "name": "add",
+                "file": "math.ts",
+                "line": 1,
+                "params": [],
+                "returns": "number",
+                "is_async": false,
+                "is_generator": false,
+                "type_params": [],
+                "uses_instanceof": false
+            }
+        ]
+    });
+    std::fs::write(
+        dir.join(rust_anything::bridge::MANIFEST),
+        manifest_json.to_string(),
+    )
+    .unwrap();
+
+    let in_file = dir.join("in_no_fn.jsonl");
+    std::fs::write(&in_file, "{\"args\":[1, 2]}\n").unwrap();
+    let err = rust_anything::harness::record(&rust_anything::harness::RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: Some(&in_file),
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        format!("{}:1: \"fn\" is missing", in_file.display())
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn record_inputs_rejects_unknown_export_and_lists_known() {
+    let dir = std::env::temp_dir().join(format!(
+        "rust-anything-inputs-unknown-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let manifest_json = serde_json::json!({
+        "schema": "rust-anything/bridge@1",
+        "root": ".",
+        "unit": "math.ts",
+        "language": "ts",
+        "kind": "napi",
+        "crate_name": "math-rs",
+        "exports": [
+            {
+                "name": "add",
+                "file": "math.ts",
+                "line": 1,
+                "params": [],
+                "returns": "number",
+                "is_async": false,
+                "is_generator": false,
+                "type_params": [],
+                "uses_instanceof": false
+            },
+            {
+                "name": "scale",
+                "file": "math.ts",
+                "line": 5,
+                "params": [],
+                "returns": "number",
+                "is_async": false,
+                "is_generator": false,
+                "type_params": [],
+                "uses_instanceof": false
+            }
+        ]
+    });
+    std::fs::write(
+        dir.join(rust_anything::bridge::MANIFEST),
+        manifest_json.to_string(),
+    )
+    .unwrap();
+
+    let in_file = dir.join("in_unknown.jsonl");
+    std::fs::write(&in_file, "{\"fn\":\"nope\",\"args\":[1, 2]}\n").unwrap();
+    let err = rust_anything::harness::record(&rust_anything::harness::RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: Some(&in_file),
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        format!(
+            "{}:1: `nope` is not an export of this unit (exports: add, scale)",
+            in_file.display()
+        )
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}

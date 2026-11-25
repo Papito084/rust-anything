@@ -260,14 +260,28 @@ pub(crate) fn generate_cases_salted(
                 cases.push(case);
                 continue;
             }
-            let name = case["fn"].as_str().unwrap_or_default().to_string();
+            let Some(name) = case["fn"].as_str().filter(|s| !s.is_empty()) else {
+                bail!("{}:{}: \"fn\" is missing", path.display(), i + 1);
+            };
             let Some(f) = manifest.exports.iter().find(|f| f.name == name) else {
+                let mut known: Vec<&str> =
+                    manifest.exports.iter().map(|f| f.name.as_str()).collect();
+                known.sort_unstable();
+                known.dedup();
                 bail!(
-                    "{}:{}: `{name}` is not an export of this unit",
+                    "{}:{}: `{name}` is not an export of this unit (exports: {})",
+                    path.display(),
+                    i + 1,
+                    known.join(", ")
+                );
+            };
+            if !case["args"].is_array() {
+                bail!(
+                    "{}:{}: \"args\" must be an array of arguments",
                     path.display(),
                     i + 1
                 );
-            };
+            }
             case["module"] = Value::String(module_for(&f.file)?);
             cases.push(case);
         }
