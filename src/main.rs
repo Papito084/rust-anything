@@ -307,9 +307,9 @@ enum Cmd {
         /// Generated cases per function, on top of the calls the workload makes.
         #[arg(long, default_value_t = 200)]
         count: usize,
-        /// Agent turns: the port, then one more per failing diff or gate.
-        #[arg(long, default_value_t = 3)]
-        rounds: usize,
+        /// Agent turns: the port, then one more per failing diff or gate (default: 3).
+        #[arg(long)]
+        rounds: Option<usize>,
         /// Print the machine-readable report as JSON.
         #[arg(long)]
         json: bool,
@@ -1254,7 +1254,7 @@ fn run() -> Result<ExitCode> {
                 root: &root,
                 command: &command,
                 lang,
-                agent: agent.as_deref(),
+                agent: agent.as_deref().filter(|a| !a.trim().is_empty()),
                 function: function.as_deref(),
                 count,
                 rounds,

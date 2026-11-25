@@ -27,7 +27,7 @@ pub struct Options<'a> {
     /// Generated cases per function.
     pub count: usize,
     /// Agent turns: the first port, then one per failed diff or gate.
-    pub rounds: usize,
+    pub rounds: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -273,6 +273,13 @@ fn say(steps: &mut Vec<String>, line: String) {
 }
 
 pub fn go(opts: &Options) -> Result<Outcome> {
+    if let Some(r) = opts.rounds {
+        anyhow::ensure!(r >= 1, "`--rounds` must be at least 1");
+        if opts.agent.is_none() {
+            anyhow::bail!("`--rounds` needs `--agent`: rounds are agent turns");
+        }
+    }
+
     let root = opts
         .root
         .canonical()
@@ -393,7 +400,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
 
     let mut prompt = task.clone();
     let rounds = if opts.agent.is_some() {
-        opts.rounds.max(1)
+        opts.rounds.unwrap_or(3)
     } else {
         0
     };
@@ -929,5 +936,47 @@ mod tests {
     fn crate_names_follow_the_function() {
         assert_eq!(crate_name("fuzzyScore"), "fuzzy-score-rs");
         assert_eq!(crate_name("dedupe_names"), "dedupe-names-rs");
+    }
+
+    #[test]
+    fn go_refuses_zero_rounds_and_rounds_without_agent() {
+        let opts0 = Options {
+            root: Path::new("."),
+            command: &[],
+            lang: None,
+            agent: None,
+            function: None,
+            count: 200,
+            rounds: Some(0),
+        };
+        let err0 = go(&opts0).unwrap_err().to_string();
+        assert_eq!(err0, "`--rounds` must be at least 1");
+
+        let opts_zero_with_agent = Options {
+            root: Path::new("."),
+            command: &[],
+            lang: None,
+            agent: Some("claude"),
+            function: None,
+            count: 200,
+            rounds: Some(0),
+        };
+        let err0_agent = go(&opts_zero_with_agent).unwrap_err().to_string();
+        assert_eq!(err0_agent, "`--rounds` must be at least 1");
+
+        let opts_no_agent = Options {
+            root: Path::new("."),
+            command: &[],
+            lang: None,
+            agent: None,
+            function: None,
+            count: 200,
+            rounds: Some(2),
+        };
+        let err_no_agent = go(&opts_no_agent).unwrap_err().to_string();
+        assert_eq!(
+            err_no_agent,
+            "`--rounds` needs `--agent`: rounds are agent turns"
+        );
     }
 }

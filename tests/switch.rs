@@ -310,6 +310,15 @@ fn go_takes_the_root_as_profile_does() {
     }
     let both = parse(&["go", "a", "--root", "b", "--", "true"]);
     assert!(both.contains("cannot be used with"), "{both}");
+
+    let err0 = parse(&["go", ".", "--rounds", "0", "--", "true"]);
+    assert!(err0.contains("`--rounds` must be at least 1"), "{err0}");
+
+    let err_no_agent = parse(&["go", ".", "--rounds", "2", "--", "true"]);
+    assert!(
+        err_no_agent.contains("rounds are agent turns"),
+        "{err_no_agent}"
+    );
 }
 
 #[test]

@@ -1059,12 +1059,12 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             };
             let root = path("root")?;
             let count = opt_usize(args, "count")?.unwrap_or(200);
-            let rounds = opt_usize(args, "rounds")?.unwrap_or(3);
+            let rounds = opt_usize(args, "rounds")?;
             serde_json::to_value(crate::go::go(&crate::go::Options {
                 root: &root,
                 command: &command,
                 lang,
-                agent: args["agent"].as_str(),
+                agent: args["agent"].as_str().filter(|a| !a.trim().is_empty()),
                 function: args["function"].as_str(),
                 count,
                 rounds,
@@ -1228,6 +1228,28 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("too large"), "{err}");
+    }
+
+    #[test]
+    fn go_refuses_zero_rounds_and_rounds_without_agent() {
+        let err0 = call(
+            "go",
+            &json!({ "root": ".", "command": ["python3", "app.py"], "rounds": 0 }),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(err0.contains("`--rounds` must be at least 1"), "{err0}");
+
+        let err_no_agent = call(
+            "go",
+            &json!({ "root": ".", "command": ["python3", "app.py"], "rounds": 2 }),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err_no_agent.contains("rounds are agent turns"),
+            "{err_no_agent}"
+        );
     }
 
     #[test]
