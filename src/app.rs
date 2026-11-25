@@ -1548,17 +1548,19 @@ pub struct RecordOptions<'a> {
     pub name: Option<&'a str>,
     pub traps: bool,
     pub timeout_secs: Option<u64>,
-    /// The app is a server: record requests instead of command lines.
-    pub http: bool,
-    /// The port a server always listens on (implies `http`); unset, it gets a free one through
-    /// `PORT` and `{port}`.
+    /// `Some(true)` records as a server, `Some(false)` drops any saved server setting and records
+    /// as a CLI, and `None` keeps the saved mode (or enables server mode if server-only options
+    /// such as `port`, non-empty `server_args`, or `pace_ms` are given).
+    pub http: Option<bool>,
+    /// The port a server always listens on (implies `http`); unset keeps the saved port, `Some(0)`
+    /// removes it so the server gets a free port through `PORT` and `{port}`.
     pub port: Option<u16>,
     /// Servers: arguments every start gets after its command, the original's and every build's
-    /// (implies `http`); kept from the last recording when empty.
-    pub server_args: &'a [String],
-    /// Servers: repository files or folders copied into a fresh working directory before every
-    /// start (implies `http`); kept from the last recording when empty.
-    pub fresh: &'a [String],
+    /// (non-empty implies `http`); `None` keeps the saved list, `Some(&[])` clears it.
+    pub server_args: Option<&'a [String]>,
+    /// Repository files or folders copied into a fresh working directory before every case (CLIs)
+    /// or start (servers); `None` keeps the saved list, `Some(&[])` clears it.
+    pub fresh: Option<&'a [String]>,
     /// Servers: milliseconds to wait after each response, for work the server does after
     /// answering (a file watcher, a write-behind); kept from the last recording when `None`.
     pub pace_ms: Option<u64>,
@@ -1645,9 +1647,7 @@ pub(crate) fn drop_stale(outcome: &mut RecordOutcome, previous: &[String]) -> Re
             // written: `two.in/sub`, `../app-cases/two.in/sub` (resolved) and `two.in/../shared`
             // (on Unix only found while `two.in` exists) all keep `two.in`.
             let resolved = path.canonicalize().ok();
-            if read.iter().any(|base| {
-                base.starts_with(&path) || resolved.as_ref().is_some_and(|r| base.starts_with(r))
-            }) {
+            if any_base_reads(&read, &path, resolved.as_deref()) {
                 continue;
             }
             if path.is_dir() {
@@ -1671,6 +1671,11 @@ pub(crate) fn drop_stale(outcome: &mut RecordOutcome, previous: &[String]) -> Re
     outcome.stale = stale;
     outcome.kept = kept;
     Ok(())
+}
+
+fn any_base_reads(read: &BTreeSet<PathBuf>, path: &Path, resolved: Option<&Path>) -> bool {
+    read.iter()
+        .any(|base| base.starts_with(path) || resolved.is_some_and(|r| base.starts_with(r)))
 }
 
 /// The `fs.base` folders that the cases in `dir` other than `going` read, each as written (joined
@@ -1967,10 +1972,18 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             normalize.push(n.clone());
         }
     }
-    let explicit = opts
-        .name
-        .map(str::to_string)
-        .or_else(|| existing.as_ref().map(|c| c.name.clone()));
+    let inferred = |run: &[String]| {
+        app_names(&repo, run, None)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| "app".to_string())
+    };
+    let explicit = opts.name.map(str::to_string).or_else(|| {
+        existing
+            .as_ref()
+            .filter(|c| opts.run.is_empty() || c.run == opts.run || c.name != inferred(&c.run))
+            .map(|c| c.name.clone())
+    });
     let names = app_names(&repo, &run, explicit.as_deref());
     let timeout_secs = opts
         .timeout_secs
@@ -1989,7 +2002,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         normalize,
         normalizers,
         timeout_secs,
-        http: crate::http::merge_config(existing.as_ref().and_then(|c| c.http.clone()), opts),
+        http: crate::http::merge_config(existing.as_ref().and_then(|c| c.http.clone()), opts)?,
         float_tolerance: match opts.float_tolerance {
             Some(t) => (crate::tolerance::check(t)? > 0.0).then_some(t),
             None => existing.as_ref().and_then(|c| c.float_tolerance),
@@ -2020,11 +2033,11 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         recorded: Vec::new(),
     };
     if let Some(http) = config.http.as_mut() {
-        if !opts.fresh.is_empty() {
-            http.fresh = opts.fresh.to_vec();
+        if let Some(fresh) = opts.fresh {
+            http.fresh = fresh.to_vec();
         }
-    } else if !opts.fresh.is_empty() {
-        config.fresh = opts.fresh.to_vec();
+    } else if let Some(fresh) = opts.fresh {
+        config.fresh = fresh.to_vec();
     } else if let Some(c) = &existing {
         config.fresh = c.fresh.clone();
     }
@@ -2038,6 +2051,13 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             cases_dir(&repo).join(CONFIG_FILE),
             serde_json::to_string_pretty(&config)? + "\n",
         )?;
+        if config.http.as_ref().is_some_and(|h| h.fresh.is_empty()) {
+            let _ = std::fs::remove_dir_all(
+                cases_dir(&repo)
+                    .join(crate::http::HTTP_DIR)
+                    .join(crate::http::FILES_DIR),
+            );
+        }
         return Ok(outcome);
     }
 
@@ -2157,6 +2177,14 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         dir.join(CONFIG_FILE),
         serde_json::to_string_pretty(&config)? + "\n",
     )?;
+    if config.fresh.is_empty() {
+        let fresh_dir = dir.join(FRESH_DIR);
+        let retained_reads = bases_read(&dir, &BTreeSet::new());
+        let resolved = fresh_dir.canonicalize().ok();
+        if !any_base_reads(&retained_reads, &fresh_dir, resolved.as_deref()) {
+            let _ = std::fs::remove_dir_all(&fresh_dir);
+        }
+    }
     Ok(outcome)
 }
 
@@ -2971,9 +2999,9 @@ mod tests {
             name: None,
             traps: false,
             timeout_secs: None,
-            http: false,
-            server_args: &[],
-            fresh: &[],
+            http: None,
+            server_args: None,
+            fresh: None,
             pace_ms: None,
             port: None,
             float_tolerance: None,
@@ -3259,9 +3287,9 @@ mod tests {
             name: None,
             traps: false,
             timeout_secs: None,
-            http: false,
-            server_args: &[],
-            fresh: &[],
+            http: None,
+            server_args: None,
+            fresh: None,
             pace_ms: None,
             port: None,
             float_tolerance: None,
@@ -3276,6 +3304,42 @@ mod tests {
         assert_eq!(read("x-3.stdout"), "two\n");
         assert_eq!(read("x-4.stdout"), "three\n");
         std::fs::remove_dir_all(repo).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_new_run_command_renames_an_inferred_name_but_keeps_a_given_one() {
+        let repo = temp_dir("rename-on-new-run").unwrap();
+        std::fs::write(repo.join("one.sh"), "echo one\n").unwrap();
+        std::fs::write(repo.join("two.sh"), "echo two\n").unwrap();
+        let rec = |script: &str, name: Option<&str>| {
+            let run = ["/bin/sh".to_string(), script.to_string()];
+            record(&RecordOptions {
+                repo: &repo,
+                run: &run,
+                inputs: None,
+                normalize: &[],
+                name,
+                traps: false,
+                timeout_secs: None,
+                http: None,
+                server_args: None,
+                fresh: None,
+                pace_ms: None,
+                port: None,
+                float_tolerance: None,
+                float_files: &[],
+                effects: None,
+                ready_secs: None,
+            })
+            .unwrap();
+            Config::load(&repo).unwrap().unwrap().name
+        };
+        assert_eq!(rec("one.sh", None), "one");
+        assert_eq!(rec("two.sh", None), "two");
+        assert_eq!(rec("two.sh", Some("mytool")), "mytool");
+        assert_eq!(rec("one.sh", None), "mytool");
+        std::fs::remove_dir_all(&repo).unwrap();
     }
 
     #[test]
@@ -3352,9 +3416,9 @@ mod tests {
             name: None,
             traps: false,
             timeout_secs: Some(0),
-            http: false,
-            server_args: &[],
-            fresh: &[],
+            http: None,
+            server_args: None,
+            fresh: None,
             pace_ms: None,
             port: None,
             float_tolerance: None,
