@@ -46,7 +46,7 @@ Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman
   <sub>Prettier against its Rust port on 59 real files from ms, Fuse.js and json-server (Apple M4). Same output, byte for byte. <a href="docs/real-world.md#prettier">How it was measured</a>.</sub>
 </p>
 
-<p align="center"><sub>PHP and C#: unit ports, through FFI and P/Invoke.</sub></p>
+<p align="center"><sub>PHP, C# and PowerShell: unit ports, through FFI and P/Invoke.</sub></p>
 
 <table>
   <tr>
