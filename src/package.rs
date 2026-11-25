@@ -202,6 +202,7 @@ pub fn package(opts: &Options) -> Result<Outcome> {
             v
         }),
     };
+    validate_version(&version)?;
     let mut files: Vec<(String, Content)> = Vec::new();
     let mut module = None;
     let mut platforms = Vec::new();
@@ -339,6 +340,51 @@ fn validate_npm_name(name: &str) -> Result<()> {
         bail!("`{name}` is not a valid npm package name (lowercase, URL-safe); pass --name");
     }
     Ok(())
+}
+
+pub(crate) fn validate_version(version: &str) -> Result<()> {
+    if !is_valid_version(version) {
+        bail!(
+            "`{version}` is not a valid package version (MAJOR.MINOR.PATCH, e.g. 1.2.0); pass --version"
+        );
+    }
+    Ok(())
+}
+
+fn is_valid_version(version: &str) -> bool {
+    if version.is_empty() || version.chars().any(char::is_whitespace) {
+        return false;
+    }
+    let (core, pre) = match version.split_once('-') {
+        Some((c, p)) => (c, Some(p)),
+        None => (version, None),
+    };
+    let core_parts: Vec<&str> = core.split('.').collect();
+    if core_parts.len() != 3 {
+        return false;
+    }
+    for part in core_parts {
+        if part.is_empty()
+            || !part.chars().all(|c| c.is_ascii_digit())
+            || (part.len() > 1 && part.starts_with('0'))
+        {
+            return false;
+        }
+    }
+    if let Some(pre) = pre {
+        if pre.is_empty() {
+            return false;
+        }
+        for id in pre.split('.') {
+            if id.is_empty()
+                || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+                || (id.chars().all(|c| c.is_ascii_digit()) && id.len() > 1 && id.starts_with('0'))
+            {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// The version of the package the unit belongs to: the nearest `package.json` for JS, the
@@ -1085,6 +1131,22 @@ mod tests {
         assert!(validate_npm_name("fuzzy/extra").is_err());
         assert!(validate_npm_name("fuzzy@1").is_err());
         assert!(validate_npm_name("@x18n/fuzzy@1").is_err());
+    }
+
+    #[test]
+    fn package_versions() {
+        assert!(validate_version("1.2.3").is_ok());
+        assert!(validate_version("1.2.3-beta.1").is_ok());
+        assert!(validate_version("0.1.0").is_ok());
+        assert!(validate_version("10.20.30-alpha-1").is_ok());
+
+        assert!(validate_version("").is_err());
+        assert!(validate_version("bogus").is_err());
+        assert!(validate_version("1.0").is_err());
+        assert!(validate_version(" 1.0.0").is_err());
+        assert!(validate_version("1.0.0 ").is_err());
+        assert!(validate_version("1.0.0-").is_err());
+        assert!(validate_version("01.0.0").is_err());
     }
 
     #[test]

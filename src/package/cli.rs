@@ -65,6 +65,7 @@ pub(super) fn package(app: &Path, opts: &Options) -> Result<Outcome> {
         .version
         .clone()
         .unwrap_or_else(|| original.version.clone());
+    super::validate_version(&version)?;
     let bins = if opts.bin.is_empty() {
         vec![name.rsplit('/').next().unwrap_or(&name).to_string()]
     } else {
