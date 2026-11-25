@@ -28,9 +28,14 @@ pub struct Batch {
 impl Batch {
     pub fn parse(spec: &str) -> Option<Self> {
         let (function, param) = spec.split_once(':')?;
+        let function = function.trim();
+        let param = param.trim();
+        if function.is_empty() || param.is_empty() {
+            return None;
+        }
         Some(Self {
-            function: function.trim().into(),
-            param: param.trim().into(),
+            function: function.into(),
+            param: param.into(),
         })
     }
 }
@@ -52,6 +57,7 @@ pub fn pascal(name: &str) -> String {
 }
 
 /// A batch the port's signature allows.
+#[derive(Debug)]
 pub(crate) struct Spec<'a> {
     pub f: &'a PortFn,
     pub item: usize,
@@ -114,13 +120,29 @@ pub(crate) fn spec_with<'a>(
         .functions
         .iter()
         .find(|f| f.js_name == b.function)
-        .ok_or_else(|| format!("`{}` is not a function of src/port.rs", b.function))?;
+        .ok_or_else(|| {
+            let names: Vec<&str> = api.functions.iter().map(|f| f.js_name.as_str()).collect();
+            let list = if names.is_empty() {
+                String::new()
+            } else {
+                format!(" (functions: {})", names.join(", "))
+            };
+            format!("`{}` is not a function of src/port.rs{list}", b.function)
+        })?;
     let wanted = snake_case(&b.param);
     let item = f
         .params
         .iter()
         .position(|(n, _)| *n == wanted || *n == b.param)
-        .ok_or_else(|| format!("`{}` has no parameter `{}`", b.function, b.param))?;
+        .ok_or_else(|| {
+            let names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+            let list = if names.is_empty() {
+                String::new()
+            } else {
+                format!(" (parameters: {})", names.join(", "))
+            };
+            format!("`{}` has no parameter `{}`{list}", b.function, b.param)
+        })?;
     let ty = f.params[item].1.trim();
     let value = |t: &str| dynamic && matches!(t, "Value" | "serde_json::Value");
     if !ITEMS.contains(&ty) && !value(ty) {
@@ -687,5 +709,53 @@ mod tests {
         );
         assert_eq!(pascal("fuzzyScore"), "FuzzyScore");
         assert_eq!(pascal("rgb_to_hsv"), "RgbToHsv");
+    }
+
+    #[test]
+    fn batch_errors_list_available_functions_and_parameters() {
+        let api = PortApi {
+            functions: vec![PortFn {
+                js_name: "add".into(),
+                rust_name: "add".into(),
+                params: vec![("a".into(), "f64".into()), ("b".into(), "f64".into())],
+                ret: "f64".into(),
+                fallible: false,
+                is_async: false,
+            }],
+            ..Default::default()
+        };
+
+        let err = spec_with(
+            &Batch {
+                function: "nope".into(),
+                param: "a".into(),
+            },
+            &api,
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            "`nope` is not a function of src/port.rs (functions: add)"
+        );
+
+        let err = spec_with(
+            &Batch {
+                function: "add".into(),
+                param: "zz".into(),
+            },
+            &api,
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(err, "`add` has no parameter `zz` (parameters: a, b)");
+    }
+
+    #[test]
+    fn batch_parse_refuses_empty_parts() {
+        assert_eq!(Batch::parse("add:"), None);
+        assert_eq!(Batch::parse(":a"), None);
+        assert_eq!(Batch::parse(" : "), None);
+        assert_eq!(Batch::parse(""), None);
     }
 }
