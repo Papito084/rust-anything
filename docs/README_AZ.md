@@ -238,9 +238,10 @@ Eyni çıxış kifayət deyil. Tətbiqin göndərdiklərini də qeydə alın, on
 C, PHP, C# və PowerShell-dən başqa hər dil batch sinifləri də alır (`--batch`): elementlər körpünü bir dəfə keçir və
 Rust-da qalır, hər çağırış isə bütün nüvələrdə hamısının üzərində işləyir.
 
-Dil repozitoriyadan müəyyən edilir (`go.mod`, `pom.xml`, `.csproj` və ya `.sln`, `pyproject.toml`,
-`Gemfile`, `composer.json`, `package.json`, əks halda ən çox rast gəlinən mənbə faylları); `--lang`
-bunu əvəz edir. Tiplər mənbədən gəlir: TS tipləri, Python type hint-ləri, C, Go, Java və C#
+Dil repozitoriyadan müəyyən edilir (`go.mod`, `pom.xml`, `build.gradle`/`build.gradle.kts`, `.csproj` və ya `.sln`,
+`pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, əks halda ən çox rast gəlinən mənbə faylları);
+`.kt` mənbələri olan və `.java` mənbələri olmayan bir Gradle modulu Kotlin-dir, qarışıq modullar Java olaraq
+qalır. `--lang` bunu əvəz edir. Tiplər mənbədən gəlir: TS tipləri, Python type hint-ləri, C, Go, Java, Kotlin və C#
 imzaları, Ruby YARD teqləri, PHP tipləri və phpdoc; rəqəm kimi istifadə olunan tipsiz parametrlər
 rəqəm kimi müəyyən edilir.
 
