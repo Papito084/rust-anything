@@ -2,64 +2,86 @@
 
 ## Unreleased
 
+## 4.1.0 (2026-11-24)
+
+- `enable --only <fn>` (repeatable) switches on just the named functions of a unit, and `--partial`
+  switches on every function whose recorded cases all match, so a unit with many exports can go
+  over one function at a time. Running it again widens or narrows the marked block in place (#351, #412 by @Lewandox).
+- `report` takes `--resolve-from <dir>` like `bench` and `fuzz`, in the CLI and the MCP tool, for
+  repositories whose `node_modules` lives elsewhere (#349, #402 by @XiaoBinGan).
+- `analyze`'s Start here details name the sibling a unit imports in the same package, which is what
+  puts it in a later wave (#348, #422 by @XiaoBinGan).
+- A Kotlin unit that takes or returns `ByteArray`, `ShortArray` or `FloatArray` says that the Java
+  wire cannot carry that array type yet, instead of calling it a class (#369, #386 by @XiaoBinGan).
+
 - `bridge --batch` on a C unit, and `refresh --batch` on a C, PHP, C# or PowerShell crate, fail with
   "`--batch` is not available for <language> units yet" instead of saving a batch that generates
-  nothing (#434).
+  nothing (#434, #440 by @SPD-RYUK).
 - Java and Kotlin ports turn `Err("Type: message")` into the same exception on the JSON, typed, wire
   and batch paths, and look in `java.time` and `java.util.concurrent` too, so a typed call no
-  longer throws `RuntimeException` for `DateTimeException` (#359).
+  longer throws `RuntimeException` for `DateTimeException` (#359, #438 by @SPD-RYUK).
 - `report` says "Nx slower" for a port slower than the original in the card's `aria-label` and in
-  REPORT.md's speedup rows, instead of "0.0x faster" and `0.0x` (#433).
+  REPORT.md's speedup rows, instead of "0.0x faster" and `0.0x` (#433, #437 by @draarivpatel-ui).
 - `analyze` and `map` count lines of code the way `gate`'s size check does, leaving out comment
-  lines, so licence headers and JSDoc no longer move a file's Lines, Start here or priority (#342).
+  lines, so licence headers and JSDoc no longer move a file's Lines, Start here or priority (#342, #435 by @AyhamJo7).
 - `profile` and `go` on a Node that refuses `--cpu-prof` in `NODE_OPTIONS` (22.14) pass it to a `node`
-  command as arguments, and stop with a clear message for wrappers such as `npx` (#346).
+  command as arguments, and stop with a clear message for wrappers such as `npx` (#346, #429 by @AyhamJo7).
 - `profile` leaves a script's top level (Python's `<module>`, Node's line-1 module function) out of
-  "What to port" and no longer advises porting it with a function it calls in a loop (#344).
+  "What to port" and no longer advises porting it with a function it calls in a loop (#344, #428 by @AyhamJo7).
 - Java and Kotlin parameters accept covariant wildcards and projections (`List<? extends CharSequence>`,
   `List<out CharSequence>`, `Map<String, ? extends Integer>`, `Array<out String>`) through both the
-  reflection converter and the binary wire; return positions, `? super T` and `in T` stay refused (#367).
+  reflection converter and the binary wire; return positions, `? super T` and `in T` stay refused (#367, #439 by @Lewandox).
 - `app record --effects smtp` records each email as its decoded `From`, `To`, `Cc` and `Subject`
   and its MIME parts (attachments as name, type, size and SHA-256), so the same mail sent with
   different MIME framing matches. `--effects smtp-raw` keeps the raw DATA, and cases recorded
-  before this keep replaying against the raw form until recorded again (#333).
-- Go ports map matching error messages back to the package's exported sentinel errors, so callers using `errors.Is` keep working (#365).
+  before this keep replaying against the raw form until recorded again (#333, #426 by @Lewandox).
+- Go ports map matching error messages back to the package's exported sentinel errors, so callers using `errors.Is` keep working (#365, #413 by @Lewandox).
 - `record --ignore-key-order` saves the choice with the crate, so `gate`, `enable`, `report` and
-  `go` compare objects regardless of key order too; `--no-ignore-key-order` undoes it (#352).
+  `go` compare objects regardless of key order too; `--no-ignore-key-order` undoes it (#352, #409 by @XiaoBinGan).
 - `map` gives each unit without a port `analyze`'s status and lists the blocked and kept ones
-  with the reason, so they no longer read as work left to port (#350).
+  with the reason, so they no longer read as work left to port (#350, #421 by @XiaoBinGan).
 - On Windows, `profile` and `go` find the project's own functions in a Node workload: Node's
   `file:///C:/...` frame URLs kept the slash before the drive letter, so no frame matched the
-  project root and `go` stopped with `no hot function to port`.
+  project root and `go` stopped with `no hot function to port` (#407, #408 by @Momentum96).
 - `app record` and `app replay` fail with `port <port> is already in use` before spawning a server
-  on an occupied port and check whether the child exited before treating the port as ready (#326).
+  on an occupied port and check whether the child exited before treating the port as ready (#326, #395 by @brixtonpham).
 - `Err("Outer+Inner: message")` in a C# port throws the nested exception the recording names,
-  like `Acme.Parser+ParseException`, instead of falling back to `InvalidOperationException` (#363).
+  like `Acme.Parser+ParseException`, instead of falling back to `InvalidOperationException` (#363, #423 by @draarivpatel-ui).
 - Recording again removes the cases the last recording wrote and this one did not (an input that
   was removed or renamed, or a case that timed out), for CLIs and in `http/`, so replay no longer
   compares against them. Cases added by hand are kept and named in the output, as are the files
-  a kept case reads through `fs.base`; switching between a CLI and `--http` removes nothing (#329).
+  a kept case reads through `fs.base`; switching between a CLI and `--http` removes nothing (#329, #420 by @puretechteam).
 - `app record --http` and `app replay` stop the whole server when it was started through a wrapper
   (`npm start`, `sh -c`, a `.bat` file): every process it started, waiting until all are gone.
   Ctrl-C during `app record --http` still stops the server too.
   The real server used to keep running, so the next run met it on the port and a replay could
-  pass against it (#325).
+  pass against it (#325, #419 by @puretechteam).
 - `record`, `fuzz`, `diff` and `bench` pass `--experimental-strip-types` to Node 22.6 to 22.17 (and
   23.0 to 23.5), which only strip TypeScript types with that flag, so TS units no longer fail with
-  `ERR_UNKNOWN_FILE_EXTENSION` on Node versions `doctor` accepts (#340).
+  `ERR_UNKNOWN_FILE_EXTENSION` on Node versions `doctor` accepts (#340, #418 by @puretechteam).
 - `app record --http` and `app replay` find a server that listens only on `::1` (a `localhost`
   bind can get IPv6 only) and send its requests there, instead of waiting 60 seconds and failing
-  with `did not listen within 60s` (#327).
+  with `did not listen within 60s` (#327, #417 by @puretechteam).
 - `app record --db-reset` and `--db-dump` run in the folder a CLI case runs in, as they already did
   for servers, so a database the app keeps next to it is the one reset and dumped, and the
   repository's own copy is left alone. Scripts they name by a relative path with a script
   extension (`reset.py`, `"my scripts/seed.sh"`, `< schema.sql`) still come from the repository;
   output redirects (`> dump.sql`, also unspaced) stay in the case's folder, and here-document
   bodies and `#` comments are left as written. Quotes, line continuations and `( )` blocks are
-  read as sh and cmd read them (#324).
+  read as sh and cmd read them (#324, #416 by @puretechteam).
 - `bridge` types Go `uint64` and `uint` as `u64` and `uintptr` as `usize` in `port.rs`, alone or as
   slice items. They were `i64`, so a result above `i64::MAX` could not go back to Go and failed
-  `diff` (#357).
+  `diff` (#357, #414 by @AyhamJo7).
+- Docs: the FAQ says how each language reads an error type (#387), the MCP `analyze` and `fuzz`
+  descriptions name every language (#392), the risks table lists only what `analyze` detects
+  (#424) and how readiness, priority and Start here are scored (#436), by @XiaoBinGan; the
+  `shadow --out` help gives each language's default (#401) and the Spanish, Italian and German
+  tables gained Kotlin and PowerShell (#396, #399, #400), by @hkhkkh; `enable` help and docs name
+  PowerShell (#441) and the Russian and Korean READMEs explain Gradle and Kotlin detection (#442,
+  #443), by @Papito084; the German, French and Portuguese READMEs got the same (#410 by @lyn1dev,
+  #415 by @sniwas, #411 by @P-r-e-m-i-u-m); CONTRIBUTING lists the missing-folder tests (#391 by
+  @NYeswanth08); and the site moved to rust-anything.com with every translated languages table
+  brought up to date.
 
 ## 4.0.0 (2026-11-24)
 
