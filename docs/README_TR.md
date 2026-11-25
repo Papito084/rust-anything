@@ -41,7 +41,7 @@ Türkiye'de 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> tar
   <sub>ms, Fuse.js ve json-server'dan alınan 59 gerçek dosyada Prettier ve Rust portu (Apple M4). Bayt bayt aynı çıktı. <a href="real-world.md#prettier">Nasıl ölçüldü</a>.</sub>
 </p>
 
-<p align="center"><sub>PHP ve C#: bugün kayıt, tekrar oynatma ve ön kapı; birim portları sırada.</sub></p>
+<p align="center"><sub>PHP ve C#: kayıt, tekrar oynatma ve ön kapı; ayrıca FFI ve P/Invoke üzerinden birim portları.</sub></p>
 
 <table>
   <tr>
@@ -248,14 +248,23 @@ sayı olarak çıkarılır.
 PHP için `analyze` bir PHP uygulamasını planlar (Composer paketleri ve PSR-4 autoloading,
 gevşek karşılaştırma ve tam sayı taşmasının float'a dönüşmesi gibi riskler, crate'lere eşlenmiş
 Composer paketleri) ve bir PHP CLI'ı ya da sunucusu kaydedilebilir, yeniden oynatılabilir ve bir
-Rust front door'unun arkasına konabilir. Birimlerini PHP'nin FFI'ı üzerinden Rust'a port etmek bir
-sonraki adımdır ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+Rust front door'unun arkasına konabilir. Bir birimin skaler, dize, liste ve ilişkisel dizi
+parametrelerine sahip üst düzey fonksiyonları PHP'nin FFI eklentisi (`php` `ext-ffi` ile, CLI için
+varsayılan olarak açıktır) üzerinden köprülenir: `diff` geçtiğinde, orijinal dosya yerine üretilen
+`php/<crate>.php` dosyasını dahil edin. Her çağrı JSON olarak sınırı geçer, yaklaşık 1 µs, bu
+nedenle `bench` küçük fonksiyonları PHP'den daha yavaş gösterir; PHP için henüz `shadow` yoktur
+([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 C# da aynı şekilde çalışır: `analyze` `.csproj` projelerini ve NuGet paketlerini okur
 (crate'lere eşlenmiş olarak), `using` yönergelerini klasörlere çözümler ve C#'ın farklı yaptığı
 şeyleri işaretler (`decimal`, `dynamic`, LINQ'in ertelenmiş sorguları, `Task`, `lock`, reflection).
 Bir C# CLI'ı veya ASP.NET sunucusu kaydedilebilir, yeniden oynatılabilir ve bir Rust front door'unun
-arkasına konabilir; birimleri P/Invoke üzerinden port etmek sırada.
+arkasına konabilir. Bir birimin skaler, dize, dizi, liste, sözlük ve record ya da düz sınıf
+parametrelerine sahip public static metotları P/Invoke üzerinden köprülenir (kaydetmek ve
+karşılaştırmak için `PATH`'te `dotnet`): `diff` geçtiğinde, üretilen `<namespace>.Rust` sınıflarını
+çağırın ya da `using` ile onlara takma ad verin. Her çağrı JSON olarak sınırı geçer, yaklaşık 1-3 µs,
+bu nedenle `bench` küçük metotları .NET'ten daha yavaş gösterir; C# için henüz `shadow` yoktur
+([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 ## Daha fazlası
 
