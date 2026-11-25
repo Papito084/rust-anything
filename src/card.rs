@@ -72,6 +72,10 @@ pub fn report(opts: &Options) -> Result<Card> {
         )
     })?;
     let manifest = Manifest::load(&crate_dir)?;
+    if let Some(dir) = opts.resolve_from {
+        dir.canonical()
+            .with_context(|| format!("resolving {}", dir.display()))?;
+    }
     harness::build(&crate_dir)?;
     let diff = harness::diff(&harness::DiffOptions {
         crate_dir: &crate_dir,

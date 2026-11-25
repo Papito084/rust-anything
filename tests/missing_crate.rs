@@ -123,3 +123,21 @@ fn bench_and_report_reject_zero_min_ms() {
     assert!(msg.contains("--min-ms"), "{msg}");
     assert!(msg.contains("at least 1"), "{msg}");
 }
+
+#[test]
+fn bench_on_missing_resolve_from_names_the_folder() {
+    let crate_dir = missing("bench-crate");
+    let resolve_dir = missing("bench-resolve");
+    let err = harness::bench(&harness::BenchOptions {
+        crate_dir: &crate_dir,
+        min_ms: 1,
+        resolve_from: Some(&resolve_dir),
+        node_args: &[],
+    })
+    .unwrap_err();
+    let msg = format!("{err:#}");
+    assert!(
+        msg.contains(&format!("resolving {}", resolve_dir.display())),
+        "{msg}"
+    );
+}

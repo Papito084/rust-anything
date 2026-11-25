@@ -789,6 +789,17 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if opts.min_ms == 0 {
         bail!("`--min-ms` must be at least 1");
     }
+    let resolve_from = opts
+        .resolve_from
+        .map(|dir| {
+            dir.canonical()
+                .with_context(|| format!("resolving {}", dir.display()))
+        })
+        .transpose()?;
+    let opts = &BenchOptions {
+        resolve_from: resolve_from.as_deref(),
+        ..*opts
+    };
     let mut rows = time_functions(opts)?;
     let crate_dir = std::path::absolute(opts.crate_dir)?;
     let diff = DiffOptions {
@@ -920,7 +931,7 @@ fn time_functions(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
         .env("RUST_ANYTHING_PATHS", alias_env(&manifest))
         .env("RUST_ANYTHING_WORKSPACE", workspace_env(&manifest));
     if let Some(dir) = opts.resolve_from {
-        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonical()?);
+        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
     }
     run(&mut cmd, "node")?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
