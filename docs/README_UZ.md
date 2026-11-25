@@ -41,7 +41,7 @@ Turkiyada 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> tomon
   <sub>ms, Fuse.js va json-server'dan olingan 59 ta haqiqiy faylda Prettier uning Rust portiga qarshi (Apple M4). Baytma-bayt bir xil natija. <a href="real-world.md#prettier">Qanday o'lchangan</a>.</sub>
 </p>
 
-<p align="center"><sub>PHP va C#: bugun yozib olish, qayta ijro va front door; modul portlari keyingi bosqichda.</sub></p>
+<p align="center"><sub>PHP va C#: yozib olish, qayta ijro va front door, shuningdek FFI va P/Invoke orqali modul portlari.</sub></p>
 
 <table>
   <tr>
@@ -249,14 +249,23 @@ son deb aniqlanadi.
 PHP uchun `analyze` PHP ilovasini rejalashtiradi (Composer paketlari va PSR-4 autoloading,
 erkin taqqoslash va butun sonning float'ga to'lib o'tishi kabi xavflar, crate'larga moslangan Composer
 paketlari), PHP CLI yoki serverini esa yozib olish, qayta ijro etish va Rust front door'i ortiga qo'yish
-mumkin. Uning birliklarini PHP FFI orqali Rust'ga port qilish keyingi qadam
-([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+mumkin. Modulning skalyar, qator, ro'yxat va assotsiativ massiv parametrlariga ega yuqori darajadagi
+funksiyalari PHP FFI kengaytmasi (`php` `ext-ffi` bilan, CLI uchun odatiy holda yoqilgan) orqali
+ko'priklanadi: `diff` muvaffaqiyatli o'tgach, asl fayl o'rniga generatsiya qilingan `php/<crate>.php`
+faylini talab qiling. Har bir chaqiruv JSON sifatida o'tadi, taxminan 1 µs, shuning uchun `bench`
+kichik funksiyalarni PHP'dan sekinroq ko'rsatadi; PHP uchun hozircha `shadow` mavjud emas
+([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 C# ham xuddi shunday ishlaydi: `analyze` `.csproj` loyihalarini va ularning NuGet paketlarini
 o'qiydi (crate'larga moslangan), `using` direktivalarini papkalarga bog'laydi va C# boshqacha
 qiladigan narsalarni belgilaydi (`decimal`, `dynamic`, LINQ'ning kechiktirilgan so'rovlari, `Task`,
 `lock`, reflection). C# CLI yoki ASP.NET serverini yozib olish, qayta ijro etish va Rust front door'i
-ortiga qo'yish mumkin; birliklarni P/Invoke orqali port qilish navbatda.
+ortiga qo'yish mumkin. Modulning skalyar, qator, massiv, ro'yxat, lug'at va record yoki oddiy klass
+parametrlariga ega public static metodlari P/Invoke orqali ko'priklanadi (yozib olish va taqqoslash
+uchun `PATH`da `dotnet`): `diff` muvaffaqiyatli o'tgach, generatsiya qilingan `<namespace>.Rust`
+klasslarini chaqiring yoki `using` orqali ularga taxallus bering. Har bir chaqiruv JSON sifatida
+o'tadi, taxminan 1-3 µs, shuning uchun `bench` kichik metodlarni .NET'dan sekinroq ko'rsatadi; C# uchun
+hozircha `shadow` mavjud emas ([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 ## Batafsil
 
