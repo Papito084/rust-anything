@@ -214,9 +214,11 @@ rust-anything app lift .
 
 ### Saved settings (`rust/app-cases/rust-anything.json`)
 
-`app record` saves its configuration in `rust/app-cases/rust-anything.json`, and `app replay`,
-`app front-door` and `app lift` read it on every run. Editing this file by hand is supported
-(for example to remove a sticky setting or clear `unordered`).
+`app record` saves its configuration in `rust/app-cases/rust-anything.json`, and `app replay` and
+`app lift` read it on every run. Editing this file by hand is supported (for example to remove a
+sticky setting or clear `unordered`). `app front-door` reads it once, when it scaffolds `rust/app`,
+and copies `run` into `rust/app/src/original.rs`: after changing `run`, edit that file too and
+rebuild, since `app front-door` never overwrites an existing `rust/app`.
 
 | Field | Flag | On re-record |
 | --- | --- | --- |
