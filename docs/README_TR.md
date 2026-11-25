@@ -239,10 +239,11 @@ Aynı çıktı yetmez. Uygulamanın dışarı gönderdiklerini de kaydedin; iki 
 C, PHP, C# ve PowerShell hariç her dil batch sınıfları da alır (`--batch`): öğeler köprüyü bir kez geçer ve Rust'ta kalır,
 her çağrı tüm çekirdeklerde hepsinin üzerinden çalışır.
 
-Dil, repodan tespit edilir (`go.mod`, `pom.xml`, bir `.csproj` veya `.sln`, `pyproject.toml`,
-`Gemfile`, `composer.json`, `package.json`, aksi halde en yaygın kaynak dosyalar); `--lang` bunu
-geçersiz kılar. Tipler kaynaktan gelir: TS tipleri, Python type hint'leri, C, Go, Java ve C#
-imzaları, Ruby YARD etiketleri, PHP tipleri ve phpdoc; sayı olarak kullanılan tipsiz parametreler
+Dil, repodan tespit edilir (`go.mod`, `pom.xml`, `build.gradle`/`build.gradle.kts`, bir `.csproj` veya `.sln`,
+`pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, aksi halde en yaygın kaynak dosyalar);
+`.kt` kaynakları olan ve `.java` kaynağı bulunmayan bir Gradle modülü Kotlin'dir, karma modüller Java
+olarak kalır. `--lang` bunu geçersiz kılar. Tipler kaynaktan gelir: TS tipleri, Python type hint'leri, C, Go,
+Java, Kotlin ve C# imzaları, Ruby YARD etiketleri, PHP tipleri ve phpdoc; sayı olarak kullanılan tipsiz parametreler
 sayı olarak çıkarılır.
 
 PHP için `analyze` bir PHP uygulamasını planlar (Composer paketleri ve PSR-4 autoloading,
