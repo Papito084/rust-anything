@@ -141,15 +141,25 @@ pub struct Cleaned {
     pub removed: bool,
     /// `CARGO_TARGET_DIR` named the folder: other cargo projects may build there too.
     pub from_env: bool,
+    pub exists: bool,
 }
 
 /// Removes the shared target folder (or only measures it with `dry_run`). A folder named by
 /// `CARGO_TARGET_DIR` is removed only with `force`, since other projects may use it.
 pub fn clean(dry_run: bool, force: bool) -> Result<Cleaned> {
-    let dir = shared_dir();
     let from_env = std::env::var_os("CARGO_TARGET_DIR").is_some_and(|d| !d.is_empty());
+    clean_in(shared_dir(), from_env, dry_run, force)
+}
+
+pub(crate) fn clean_in(
+    dir: PathBuf,
+    from_env: bool,
+    dry_run: bool,
+    force: bool,
+) -> Result<Cleaned> {
     let bytes = size(&dir);
-    let removed = !dry_run && (!from_env || force) && dir.exists();
+    let exists = dir.exists();
+    let removed = !dry_run && (!from_env || force) && exists;
     if removed {
         std::fs::remove_dir_all(&dir).with_context(|| format!("removing {}", dir.display()))?;
     }
@@ -158,6 +168,7 @@ pub fn clean(dry_run: bool, force: bool) -> Result<Cleaned> {
         bytes,
         removed,
         from_env,
+        exists,
     })
 }
 
@@ -289,5 +300,62 @@ mod tests {
         assert_eq!(human(1_048_000), "1023.4 KB");
         assert_eq!(human(1023), "1023 B");
         assert_eq!(human(1024), "1.0 KB");
+    }
+
+    #[test]
+    fn clean_missing_folder_reports_not_exists_and_not_removed() {
+        let root = scratch("clean-missing");
+        let missing = root.join("missing-dir");
+        assert!(!missing.exists());
+
+        // Without force
+        let c = clean_in(missing.clone(), false, false, false).unwrap();
+        assert!(!c.exists);
+        assert!(!c.removed);
+        assert_eq!(c.bytes, 0);
+
+        // With force and from_env
+        let c = clean_in(missing.clone(), true, false, true).unwrap();
+        assert!(!c.exists);
+        assert!(!c.removed);
+        assert_eq!(c.bytes, 0);
+
+        // Dry run
+        let c = clean_in(missing.clone(), false, true, false).unwrap();
+        assert!(!c.exists);
+        assert!(!c.removed);
+        assert_eq!(c.bytes, 0);
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn clean_existing_folder_respects_dry_run_and_env_force() {
+        let root = scratch("clean-existing");
+        let target = root.join("target");
+        std::fs::create_dir_all(&target).unwrap();
+        std::fs::write(target.join("file.txt"), "hello").unwrap();
+        assert!(target.exists());
+
+        // from_env without force: not removed
+        let c = clean_in(target.clone(), true, false, false).unwrap();
+        assert!(c.exists);
+        assert!(!c.removed);
+        assert!(c.from_env);
+        assert!(target.exists());
+
+        // dry_run with force: not removed, but exists
+        let c = clean_in(target.clone(), true, true, true).unwrap();
+        assert!(c.exists);
+        assert!(!c.removed);
+        assert!(target.exists());
+
+        // normal clean: removed!
+        let c = clean_in(target.clone(), false, false, false).unwrap();
+        assert!(c.exists);
+        assert!(c.removed);
+        assert!(!target.exists());
+
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

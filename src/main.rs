@@ -1390,15 +1390,23 @@ fn run() -> Result<ExitCode> {
             let c = rust_anything::cache::clean(dry_run, force)?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&c)?);
+            } else if !c.exists {
+                say!("nothing to remove: {} does not exist", c.dir.display());
             } else if c.removed {
                 say!(
                     "Removed {} ({})",
                     c.dir.display(),
                     rust_anything::cache::human(c.bytes)
                 );
-            } else if c.from_env && !dry_run {
+            } else if c.from_env && !force {
                 say!(
                     "{} ({}) is CARGO_TARGET_DIR, which other cargo projects may share; pass --force to remove it",
+                    c.dir.display(),
+                    rust_anything::cache::human(c.bytes)
+                );
+            } else if dry_run {
+                say!(
+                    "would remove {} ({})",
                     c.dir.display(),
                     rust_anything::cache::human(c.bytes)
                 );
