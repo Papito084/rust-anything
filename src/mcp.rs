@@ -813,11 +813,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         "analyze" => {
             let root = path("root")?;
             let lang = match args.get("lang") {
-                Some(v) if !v.is_null() => serde_json::from_value(v.clone()).context("`lang`")?,
-                _ => crate::lang::Lang::detect(&root),
+                Some(v) if !v.is_null() => {
+                    Some(serde_json::from_value(v.clone()).context("`lang`")?)
+                }
+                _ => None,
             };
             let whole_app = opt_bool(args, "whole_app")?.unwrap_or(false);
-            let mut report = analyze::analyze_lang(&root, lang)?;
+            let mut report = analyze::analyze_opts(&root, lang)?;
             if whole_app {
                 report.whole_app = Some(crate::whole_app::whole_app(&root, &report));
             }

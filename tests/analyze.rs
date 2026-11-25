@@ -262,6 +262,42 @@ fn a_language_the_folder_lacks_is_an_error_not_an_empty_plan() {
 }
 
 #[test]
+fn analyze_on_an_empty_folder_warns_and_omits_language_and_order_by_package() {
+    use rust_anything::lang::Lang;
+    let empty = std::env::temp_dir().join(format!("ra-analyze-empty-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&empty);
+    std::fs::create_dir_all(&empty).unwrap();
+
+    assert_eq!(Lang::detect_optional(&empty), None);
+    assert_eq!(Lang::detect(&empty), Lang::Ts);
+
+    let report = rust_anything::analyze::analyze(&empty).unwrap();
+    assert_eq!(report.summary.source_files, 0);
+    assert_eq!(report.units.len(), 0);
+    assert!(
+        report
+            .warnings
+            .iter()
+            .any(|w| w.contains("no source files of a supported language")),
+        "{:?}",
+        report.warnings
+    );
+
+    let md = rust_anything::report::markdown(&report, "empty");
+    assert!(md.starts_with("# Rust migration plan: empty\n"), "{md}");
+    assert!(!md.contains("# Rust migration plan: empty ("), "{md}");
+    assert!(
+        md.contains(
+            "no source files of a supported language (TS/JS, Python, C, Go, Ruby, Java, Kotlin, PHP, C#, PowerShell)"
+        ),
+        "{md}"
+    );
+    assert!(!md.contains("Order by package"), "{md}");
+
+    let _ = std::fs::remove_dir_all(&empty);
+}
+
+#[test]
 fn json_output_is_versioned() {
     let json = serde_json::to_value(mini()).unwrap();
     assert_eq!(json["schema"], "rust-anything/analyze@1");

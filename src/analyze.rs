@@ -226,10 +226,6 @@ struct UnitBuild {
     fan_in: usize,
 }
 
-pub fn analyze(root: &Path) -> Result<Report> {
-    analyze_lang(root, Lang::detect(root))
-}
-
 /// Compiled or packaged files: what someone may point `analyze` at instead of source.
 const COMPILED: [&str; 17] = [
     "apk", "aab", "ipa", "xapk", "jar", "war", "aar", "class", "dex", "exe", "dll", "so", "dylib",
@@ -244,7 +240,16 @@ fn compiled_hint() -> &'static str {
      visible behavior is a separate project"
 }
 
+pub fn analyze(root: &Path) -> Result<Report> {
+    analyze_opts(root, None)
+}
+
 pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
+    analyze_opts(root, Some(lang))
+}
+
+pub fn analyze_opts(root: &Path, requested_lang: Option<Lang>) -> Result<Report> {
+    let lang = requested_lang.unwrap_or_else(|| Lang::detect(root));
     if !root
         .try_exists()
         .with_context(|| format!("reading {}", root.display()))?
@@ -297,20 +302,20 @@ pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
             Some(scan::scan(parse_as, &code))
         })
         .collect();
-    let mut report = build(root, &ws, &facts, lang);
+    let mut report = build(root, &ws, &facts, lang, requested_lang);
     // A language the folder does not hold (a typo, or code in a subfolder) would read like a
     // finished plan with nothing to do. Any file of the language counts, UI and tests included,
     // and the warnings (files hidden by ignore rules) say why the plan would have been empty.
-    if ws.files.is_empty() {
-        let detected = Lang::detect(root);
-        if detected != lang {
-            let reasons: String = report.warnings.iter().map(|w| format!(". {w}")).collect();
-            bail!(
-                "no {} source files found; the code here looks like {}{reasons}",
-                lang.name(),
-                detected.name()
-            );
-        }
+    if ws.files.is_empty()
+        && let Some(detected) = Lang::detect_optional(root)
+        && detected != lang
+    {
+        let reasons: String = report.warnings.iter().map(|w| format!(". {w}")).collect();
+        bail!(
+            "no {} source files found; the code here looks like {}{reasons}",
+            lang.name(),
+            detected.name()
+        );
     }
     check_bridgeable(root, &mut report, lang);
     Ok(report)
@@ -401,7 +406,13 @@ fn check_bridgeable(root: &Path, report: &mut Report, lang: Lang) {
     report.start_here = start_here(&report.units);
 }
 
-fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -> Report {
+fn build(
+    root: &Path,
+    ws: &Workspace,
+    facts: &[Option<FileFacts>],
+    lang: Lang,
+    requested_lang: Option<Lang>,
+) -> Report {
     let file_index: HashMap<&str, usize> = ws
         .files
         .iter()
@@ -640,6 +651,16 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
                  ignore rules (.gitignore or .ignore files in this repository); the plan is empty \
                  because of them, not because there is nothing to port",
                 lang.name(),
+                root.display()
+            ));
+        }
+        if hidden == 0
+            && compiled == 0
+            && requested_lang.is_none()
+            && Lang::detect_optional(root).is_none()
+        {
+            warnings.push(format!(
+                "no source files of a supported language (TS/JS, Python, C, Go, Ruby, Java, Kotlin, PHP, C#, PowerShell) under {}",
                 root.display()
             ));
         }

@@ -90,11 +90,19 @@ fn whole_app(out: &mut String, w: &crate::whole_app::WholeApp) -> std::fmt::Resu
 
 fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     let s = &r.summary;
-    writeln!(
-        out,
-        "# Rust migration plan: {title} ({})\n",
-        r.language.name()
-    )?;
+    let names_language = !r
+        .warnings
+        .iter()
+        .any(|w| w.starts_with("no source files of a supported language"));
+    if names_language {
+        writeln!(
+            out,
+            "# Rust migration plan: {title} ({})\n",
+            r.language.name()
+        )?;
+    } else {
+        writeln!(out, "# Rust migration plan: {title}\n")?;
+    }
     writeln!(
         out,
         "{}, {} ({}), {}, {}, grouped into {}.\n",
@@ -182,47 +190,50 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
         }
     }
 
-    writeln!(out, "## Order by package\n")?;
-    writeln!(
-        out,
-        "Packages come after the workspace packages they use. Inside a package, port by wave: a unit's imports are in earlier waves.\n"
-    )?;
-    for p in &r.packages {
-        let deps = if p.workspace_deps.is_empty() {
-            String::new()
-        } else {
-            format!(", uses {}", p.workspace_deps.join(", "))
-        };
+    if !r.units.is_empty() {
+        writeln!(out, "## Order by package\n")?;
         writeln!(
             out,
-            "### {}. {} (`{}`, {}, {}{deps})\n",
-            p.order,
-            p.name,
-            if p.dir.is_empty() { "." } else { &p.dir },
-            p.runtime,
-            count(p.test_files, "test file")
+            "Packages come after the workspace packages they use. Inside a package, port by wave: a unit's imports are in earlier waves.\n"
         )?;
-        writeln!(
-            out,
-            "| Wave | Unit | Status | Lines | Readiness | Bridge | Main risks |"
-        )?;
-        writeln!(out, "| ---: | --- | --- | ---: | ---: | --- | --- |")?;
-        let mut units: Vec<&UnitReport> = r.units.iter().filter(|u| u.package == p.name).collect();
-        units.sort_by(|a, b| a.wave.cmp(&b.wave).then(b.readiness.cmp(&a.readiness)));
-        for u in units {
+        for p in &r.packages {
+            let deps = if p.workspace_deps.is_empty() {
+                String::new()
+            } else {
+                format!(", uses {}", p.workspace_deps.join(", "))
+            };
             writeln!(
                 out,
-                "| {} | `{}` | {} | {} | {} | {} | {} |",
-                u.wave,
-                u.id,
-                status_label(u.status),
-                u.loc,
-                u.readiness,
-                u.bridge.label(),
-                top_risks(u, 2)
+                "### {}. {} (`{}`, {}, {}{deps})\n",
+                p.order,
+                p.name,
+                if p.dir.is_empty() { "." } else { &p.dir },
+                p.runtime,
+                count(p.test_files, "test file")
             )?;
+            writeln!(
+                out,
+                "| Wave | Unit | Status | Lines | Readiness | Bridge | Main risks |"
+            )?;
+            writeln!(out, "| ---: | --- | --- | ---: | ---: | --- | --- |")?;
+            let mut units: Vec<&UnitReport> =
+                r.units.iter().filter(|u| u.package == p.name).collect();
+            units.sort_by(|a, b| a.wave.cmp(&b.wave).then(b.readiness.cmp(&a.readiness)));
+            for u in units {
+                writeln!(
+                    out,
+                    "| {} | `{}` | {} | {} | {} | {} | {} |",
+                    u.wave,
+                    u.id,
+                    status_label(u.status),
+                    u.loc,
+                    u.readiness,
+                    u.bridge.label(),
+                    top_risks(u, 2)
+                )?;
+            }
+            writeln!(out)?;
         }
-        writeln!(out)?;
     }
 
     if !r.dependencies.is_empty() {

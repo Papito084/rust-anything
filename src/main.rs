@@ -748,8 +748,7 @@ fn run() -> Result<ExitCode> {
             {
                 anyhow::bail!("no folder {}", root.display());
             }
-            let lang = lang.unwrap_or_else(|| rust_anything::lang::Lang::detect(&root));
-            let mut report = analyze::analyze_lang(&root, lang)
+            let mut report = analyze::analyze_opts(&root, lang)
                 .with_context(|| format!("analyzing {}", root.display()))?;
             if whole_app {
                 report.whole_app = Some(rust_anything::whole_app::whole_app(&root, &report));

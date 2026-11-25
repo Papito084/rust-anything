@@ -74,9 +74,15 @@ impl Lang {
 
     /// The language of a repository: from its manifest files, else its most common source files.
     pub fn detect(root: &Path) -> Self {
+        Self::detect_optional(root).unwrap_or(Self::Ts)
+    }
+
+    /// Like `detect`, but returns `None` when there are no manifest files and no source files
+    /// of any supported language.
+    pub fn detect_optional(root: &Path) -> Option<Self> {
         let has = |name: &str| root.join(name).exists();
         if has("go.mod") {
-            return Self::Go;
+            return Some(Self::Go);
         }
         if has("pom.xml") || has("build.gradle") || has("build.gradle.kts") {
             // A Gradle Kotlin DSL module can hold Kotlin, Java or both. Kotlin owns only a
@@ -126,10 +132,10 @@ impl Lang {
                     }
                 }
                 if kt > 0 && java == 0 {
-                    return Self::Kotlin;
+                    return Some(Self::Kotlin);
                 }
             }
-            return Self::Java;
+            return Some(Self::Java);
         }
         let dotnet = std::fs::read_dir(root).is_ok_and(|entries| {
             entries.flatten().any(|e| {
@@ -138,19 +144,19 @@ impl Lang {
             })
         });
         if dotnet || has("Directory.Build.props") {
-            return Self::Csharp;
+            return Some(Self::Csharp);
         }
         if has("pyproject.toml") || has("setup.py") || has("setup.cfg") {
-            return Self::Python;
+            return Some(Self::Python);
         }
         if has("Gemfile") {
-            return Self::Ruby;
+            return Some(Self::Ruby);
         }
         if has("composer.json") {
-            return Self::Php;
+            return Some(Self::Php);
         }
         if has("package.json") {
-            return Self::Ts;
+            return Some(Self::Ts);
         }
         let mut counts = [0usize; Self::ALL.len()];
         for entry in crate::walk::builder(root)
@@ -171,10 +177,13 @@ impl Lang {
                 counts[i] += 1;
             }
         }
+        if counts.iter().all(|&c| c == 0) {
+            return None;
+        }
         let best = (0..Self::ALL.len())
             .max_by_key(|&i| (counts[i], std::cmp::Reverse(i)))
             .unwrap_or(0);
-        Self::ALL[best]
+        Some(Self::ALL[best])
     }
 
     const ALL: [Self; 10] = [
