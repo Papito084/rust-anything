@@ -237,10 +237,11 @@ rust-anything gate rust/fuzzy-rs                       # النجاح يعني: 
 تحصل كل لغة عدا C وPHP وC# وPowerShell أيضًا على فئات الدفعات (`--batch`): تعبر العناصر الحدّ
 مرة واحدة وتبقى في Rust، وكل استدعاء يعالجها جميعًا على كل الأنوية.
 
-تُكتشف اللغة من المستودع (`go.mod` أو `pom.xml` أو `.csproj` أو `.sln` أو
+تُكتشف اللغة من المستودع (`go.mod` أو `pom.xml` أو `build.gradle`/`build.gradle.kts` أو `.csproj` أو `.sln` أو
 `pyproject.toml` أو `Gemfile` أو `composer.json` أو `package.json`، وإلا فأكثر ملفات المصدر شيوعًا)؛
+ووحدة Gradle ذات ملفات مصدر `.kt` وبدون ملفات مصدر `.java` تُعد Kotlin، وتبقى الوحدات المختلطة Java.
 ويتجاوز `--lang` ذلك. تُؤخذ الأنواع من المصدر: أنواع TS وتلميحات أنواع Python وتواقيع C وGo
-وJava وC# ووسوم YARD في Ruby وأنواع PHP وphpdoc؛ أما المعاملات غير المصنّفة التي تُستخدم كأرقام
+وJava وKotlin وC# ووسوم YARD في Ruby وأنواع PHP وphpdoc؛ أما المعاملات غير المصنّفة التي تُستخدم كأرقام
 فتُستنتج أرقامًا.
 
 بالنسبة إلى PHP، يخطط `analyze` لتطبيق PHP (حزم Composer والتحميل التلقائي PSR-4، ومخاطر مثل
