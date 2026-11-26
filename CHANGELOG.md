@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `package`: refuse `--bin` and `--original` on unit crates, and `--fallback` on wasm and PyO3
+  crates (#701).
+
 - A napi export called without an optional structured argument, such as an array, now gets
   `None` on the JSON path that async calls always take, instead of failing with
   `invalid type: map, expected a sequence` before the port runs. A `serde_json::Value` parameter
