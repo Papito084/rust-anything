@@ -2196,8 +2196,8 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
                 say!(
-                    "{} cases; build: {}",
-                    outcome.cases,
+                    "{}; build: {}",
+                    counted(outcome.cases, "case"),
                     outcome
                         .build
                         .as_ref()
