@@ -814,10 +814,13 @@ fn opt_bool(args: &Value, key: &str) -> Result<Option<bool>> {
 
 fn call(name: &str, args: &Value) -> Result<Value> {
     let path = |key: &str| -> Result<PathBuf> {
-        args[key]
-            .as_str()
-            .map(PathBuf::from)
-            .with_context(|| format!("missing `{key}`"))
+        match args.get(key) {
+            None | Some(Value::Null) => anyhow::bail!("missing `{key}`"),
+            Some(v) => v
+                .as_str()
+                .map(PathBuf::from)
+                .with_context(|| format!("`{key}` must be a string, not {v}")),
+        }
     };
     let opt_path = |key: &str| args[key].as_str().map(PathBuf::from);
     let strings = |key: &str| -> Vec<String> {
@@ -1895,5 +1898,31 @@ mod tests {
                 "{tool} {args}: {err:#}"
             );
         }
+    }
+
+    #[test]
+    fn required_path_arg_must_be_a_string() {
+        let err = call("analyze", &json!({})).unwrap_err().to_string();
+        assert_eq!(err, "missing `root`");
+
+        let err = call("analyze", &json!({ "root": null }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "missing `root`");
+
+        let err = call("analyze", &json!({ "root": 5 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`root` must be a string, not 5");
+
+        let err = call("app_lift", &json!({ "repo": true }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`repo` must be a string, not true");
+
+        let err = call("package", &json!({ "crate": ["x"] }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`crate` must be a string, not [\"x\"]");
     }
 }
