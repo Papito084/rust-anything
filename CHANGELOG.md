@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `gate`: say "the 1 function that fails" instead of "each of the 1 functions that fail" in the
+  `error cases` check (#698).
+
 - A napi export called without an optional structured argument, such as an array, now gets
   `None` on the JSON path that async calls always take, instead of failing with
   `invalid type: map, expected a sequence` before the port runs. A `serde_json::Value` parameter
