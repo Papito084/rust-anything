@@ -1225,12 +1225,14 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let repo = path("repo")?;
             let timeout_secs = opt_timeout()?;
             let redact = opt_bool(args, "redact")?.unwrap_or(false);
+            let build = opt_string(args, "build")?;
+            let case = opt_string(args, "case")?;
             let opts = app::ReplayOptions {
                 repo: &repo,
-                build: args["build"].as_str(),
+                build: build.as_deref(),
                 timeout_secs,
                 port: opt_u16(args, "port")?,
-                case: args["case"].as_str(),
+                case: case.as_deref(),
             };
             serde_json::to_value(if redact {
                 app::replay_redacted(&opts)?
@@ -1263,9 +1265,10 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         "app_drift" => {
             let repo = path("repo")?;
             let timeout_secs = opt_timeout()?;
+            let build = opt_string(args, "build")?;
             serde_json::to_value(crate::drift::drift(&crate::drift::DriftOptions {
                 repo: &repo,
-                build: args["build"].as_str(),
+                build: build.as_deref(),
                 timeout_secs,
             })?)?
         }
@@ -1895,5 +1898,23 @@ mod tests {
                 "{tool} {args}: {err:#}"
             );
         }
+    }
+
+    #[test]
+    fn app_replay_and_app_drift_reject_non_string_build_or_case() {
+        let err = call("app_replay", &json!({ "repo": ".", "case": 5 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`case` must be a string, not 5");
+
+        let err = call("app_replay", &json!({ "repo": ".", "build": true }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`build` must be a string, not true");
+
+        let err = call("app_drift", &json!({ "repo": ".", "build": 42 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`build` must be a string, not 42");
     }
 }
