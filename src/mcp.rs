@@ -1082,13 +1082,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let crate_dir = path("crate")?;
             serde_json::to_value(crate::package::package(&crate::package::Options {
                 crate_dir: &crate_dir,
-                name: args["name"].as_str().map(str::to_string),
-                version: args["version"].as_str().map(str::to_string),
+                name: opt_string(args, "name")?,
+                version: opt_string(args, "version")?,
                 out: opt_path("out"),
                 dry_run: opt_bool(args, "dry_run")?.unwrap_or(false),
-                fallback: args["fallback"].as_str().map(str::to_string),
+                fallback: opt_string(args, "fallback")?,
                 bin: strings("bin"),
-                original: args["original"].as_str().map(str::to_string),
+                original: opt_string(args, "original")?,
             })?)?
         }
         "go" => {
@@ -1895,5 +1895,28 @@ mod tests {
                 "{tool} {args}: {err:#}"
             );
         }
+    }
+
+    #[test]
+    fn package_rejects_non_string_version_name_fallback_or_original() {
+        let err = call("package", &json!({ "crate": ".", "version": 2 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`version` must be a string, not 2");
+
+        let err = call("package", &json!({ "crate": ".", "name": false }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`name` must be a string, not false");
+
+        let err = call("package", &json!({ "crate": ".", "fallback": 42 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`fallback` must be a string, not 42");
+
+        let err = call("package", &json!({ "crate": ".", "original": [] }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`original` must be a string, not []");
     }
 }
