@@ -820,6 +820,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             .with_context(|| format!("missing `{key}`"))
     };
     let opt_path = |key: &str| args[key].as_str().map(PathBuf::from);
+    let req_str = |key: &str| -> Result<&str> {
+        match args.get(key) {
+            None | Some(Value::Null) => anyhow::bail!("missing `{key}`"),
+            Some(Value::String(s)) => Ok(s.as_str()),
+            Some(v) => anyhow::bail!("`{key}` must be a string, not {v}"),
+        }
+    };
     let strings = |key: &str| -> Vec<String> {
         args[key]
             .as_array()
@@ -865,10 +872,10 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let force = opt_bool(args, "force")?.unwrap_or(false);
             serde_json::to_value(bridge::bridge(&bridge::Options {
                 root: &root,
-                unit: args["unit"].as_str().context("missing `unit`")?,
+                unit: req_str("unit")?,
                 kind,
                 out: opt_path("out"),
-                name: args["name"].as_str().map(str::to_string),
+                name: opt_string(args, "name")?,
                 force,
                 keep: strings("keep"),
                 lang: None,
@@ -1250,7 +1257,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let repo = path("repo")?;
             serde_json::to_value(front_door::wire(&front_door::WireOptions {
                 repo: &repo,
-                unit: args["unit"].as_str().context("missing `unit`")?,
+                unit: req_str("unit")?,
                 commands: &strings("commands"),
                 routes: &strings("routes"),
                 skip_gate: opt_bool(args, "skip_gate")?.unwrap_or(false),
@@ -1895,5 +1902,56 @@ mod tests {
                 "{tool} {args}: {err:#}"
             );
         }
+    }
+
+    #[test]
+    fn bridge_and_app_wire_reject_non_string_unit_or_name() {
+        let out =
+            std::env::temp_dir().join(format!("rust-anything-mcp-unit-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&out);
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mini");
+
+        let err = call("bridge", &json!({ "root": &root, "out": &out }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "missing `unit`");
+
+        let err = call(
+            "bridge",
+            &json!({ "root": &root, "unit": null, "out": &out }),
+        )
+        .unwrap_err()
+        .to_string();
+        assert_eq!(err, "missing `unit`");
+
+        let err = call("bridge", &json!({ "root": &root, "unit": 5, "out": &out }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`unit` must be a string, not 5");
+        assert!(!out.exists(), "a refused bridge must not create the crate");
+
+        let err = call(
+            "bridge",
+            &json!({ "root": &root, "unit": "packages/a/src/util.ts", "name": 7, "out": &out }),
+        )
+        .unwrap_err()
+        .to_string();
+        assert_eq!(err, "`name` must be a string, not 7");
+        assert!(!out.exists(), "a refused bridge must not create the crate");
+
+        let err = call("app_wire", &json!({ "repo": "." }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "missing `unit`");
+
+        let err = call("app_wire", &json!({ "repo": ".", "unit": null }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "missing `unit`");
+
+        let err = call("app_wire", &json!({ "repo": ".", "unit": 5 }))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "`unit` must be a string, not 5");
     }
 }

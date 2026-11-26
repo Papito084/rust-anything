@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The MCP `bridge` and `app_wire` tools say `` `unit` must be a string, not <val> `` when `unit`
+  is not a string, and `bridge` refuses a non-string `name` with `` `name` must be a string, not <val> ``
+  instead of ignoring it (#684 by @Papito084).
 - `docs/whole-apps.md` says six of the seven `app` commands are MCP tools and that `app shadow` is
   CLI only, instead of "All six are MCP tools too" (#672, #674 by @XiaoBinGan).
 - The MCP `app_record` tool refuses a `ready`, `name`, `db_reset` or `db_dump` that is neither a
