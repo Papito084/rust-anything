@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `gate`: align all check details to the same column, including 11-character names like
+  `error cases` and `known diffs` (#700).
+
 - A napi export called without an optional structured argument, such as an array, now gets
   `None` on the JSON path that async calls always take, instead of failing with
   `invalid type: map, expected a sequence` before the port runs. A `serde_json::Value` parameter

@@ -1633,27 +1633,7 @@ fn run() -> Result<ExitCode> {
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
-                for check in &outcome.checks {
-                    let mark = if check.passed { "pass" } else { "FAIL" };
-                    let first = check.detail.lines().next().unwrap_or_default();
-                    say!("{mark}  {:<10} {first}", check.name);
-                    if !check.passed {
-                        for line in check.detail.lines().skip(1) {
-                            say!("            {line}");
-                        }
-                        if let Some(fix) = &check.fix {
-                            say!("            fix: {fix}");
-                        }
-                    }
-                }
-                say!(
-                    "{}",
-                    if outcome.passed {
-                        "Gate passed."
-                    } else {
-                        "Gate failed."
-                    }
-                );
+                say_raw!("{}", gate::text(&outcome));
             }
             if !outcome.passed {
                 return Ok(ExitCode::FAILURE);
