@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `go` retry prompt says "1 distinct difference" for one difference and "N distinct differences"
+  for more, instead of "N distinct difference(s)", and "1 case" instead of "1 case(s)" (#731).
+
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`

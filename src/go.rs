@@ -656,20 +656,18 @@ fn differences(diff: &crate::harness::DiffOutcome) -> String {
             .collect();
         return format!("{head} First mismatches:\n{}", shown.join("\n"));
     }
-    let mut out = format!(
-        "{head} {} distinct difference(s), most cases first:",
-        diff.groups.len()
-    );
+    let diff_count = crate::report::count(diff.groups.len(), "distinct difference");
+    let mut out = format!("{head} {diff_count}, most cases first:");
     for g in diff.groups.iter().take(5) {
         let mut example = g.example.clone();
         let at = example
             .as_object_mut()
             .and_then(|m| m.remove("at"))
             .and_then(|at| serde_json::from_value::<crate::mismatch::At>(at).ok());
+        let cases_count = crate::report::count(g.cases, "case");
         out += &format!(
-            "\n- {} ({} case(s), id {})\n  example: {}",
+            "\n- {} ({cases_count}, id {})\n  example: {}",
             g.label(),
-            g.cases,
             g.id,
             serde_json::to_string(&example).unwrap_or_default()
         );
@@ -700,11 +698,11 @@ mod tests {
         diff.groups = crate::mismatch::group_mismatches(&diff.mismatches);
         let text = differences(&diff);
         assert!(
-            text.starts_with("4 of 10 recorded cases differ. 1 distinct difference(s)"),
+            text.starts_with("4 of 10 recorded cases differ. 1 distinct difference,"),
             "{text}"
         );
         assert!(
-            text.contains("- count: return $ (value) (4 case(s), id "),
+            text.contains("- count: return $ (value) (4 cases, id "),
             "{text}"
         );
         assert_eq!(text.matches("example:").count(), 1, "{text}");
