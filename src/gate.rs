@@ -774,7 +774,12 @@ pub struct GateOutcome {
 pub fn text(outcome: &GateOutcome) -> String {
     use std::fmt::Write as _;
     let mut out = String::new();
-    let width = outcome.checks.iter().map(|c| c.name.len()).max().unwrap_or(0);
+    let width = outcome
+        .checks
+        .iter()
+        .map(|c| c.name.len())
+        .max()
+        .unwrap_or(0);
     for check in &outcome.checks {
         let mark = if check.passed { "pass" } else { "FAIL" };
         let first = check.detail.lines().next().unwrap_or_default();
@@ -1646,7 +1651,8 @@ mod tests {
                 Check {
                     name: "error cases",
                     passed: true,
-                    detail: "the 1 function that fails in the original has a recorded failing case".into(),
+                    detail: "the 1 function that fails in the original has a recorded failing case"
+                        .into(),
                     fix: None,
                 },
                 Check {
