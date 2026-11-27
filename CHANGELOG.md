@@ -3,8 +3,8 @@
 ## Unreleased
 
 - `go` retry prompt says "1 distinct difference" for one difference and "N distinct differences"
-  for more, instead of "N distinct difference(s)", and "1 case" instead of "1 case(s)" (#731).
-
+  for more, instead of "N distinct difference(s)", and "1 case" instead of "1 case(s)"
+  (#731, #756 by @Papito084).
 - `record --from-tests` says "Captured 1 call from the tests" for one call and
   "Captured N calls from the tests" for more, instead of "Captured N call(s)"
   (#733, #755 by @Papito084).
