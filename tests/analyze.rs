@@ -305,7 +305,40 @@ fn a_language_the_folder_lacks_is_an_error_not_an_empty_plan() {
     assert_eq!(frontend.unwrap().summary.ui_files, 1);
     let err = hidden.unwrap_err().to_string();
     assert!(err.contains("no Python source files"), "{err}");
-    assert!(err.contains("excluded by ignore rules"), "{err}");
+    assert!(
+        err.contains("1 Python file under") && err.contains("is excluded by ignore rules"),
+        "{err}"
+    );
+}
+
+#[test]
+fn analyze_warns_singular_or_plural_on_compiled_or_packaged_files() {
+    let dir = std::env::temp_dir().join(format!("ra-analyze-compiled-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("app.pyc"), b"x").unwrap();
+
+    let report1 = rust_anything::analyze::analyze(&dir).unwrap();
+    assert!(
+        report1
+            .warnings
+            .iter()
+            .any(|w| w.contains("only 1 compiled or packaged file.")),
+        "{:?}",
+        report1.warnings
+    );
+
+    std::fs::write(dir.join("lib.pyc"), b"y").unwrap();
+    let report2 = rust_anything::analyze::analyze(&dir).unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(
+        report2
+            .warnings
+            .iter()
+            .any(|w| w.contains("only 2 compiled or packaged files.")),
+        "{:?}",
+        report2.warnings
+    );
 }
 
 #[test]
@@ -526,7 +559,12 @@ fn ignore_rules_above_the_repository_are_skipped_and_hiding_everything_warns() {
     let report = analyze(&repo).unwrap();
     assert_eq!(report.summary.source_files, 0);
     assert_eq!(report.warnings.len(), 1);
-    assert!(report.warnings[0].contains("1 TypeScript/JavaScript files"));
+    assert!(
+        report.warnings[0].contains("1 TypeScript/JavaScript file")
+            && report.warnings[0].contains("is excluded by ignore rules"),
+        "{:?}",
+        report.warnings
+    );
 
     std::fs::remove_dir_all(&tmp).unwrap();
 }

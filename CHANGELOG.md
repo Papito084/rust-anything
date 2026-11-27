@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `analyze` says "1 <language> file under . is excluded" and "only 1 compiled or packaged file"
+  instead of plural nouns for a single file (#738 by @Papito084).
+
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`
