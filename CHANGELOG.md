@@ -5,6 +5,26 @@
 - `record --from-tests` says "Captured 1 call from the tests" for one call and
   "Captured N calls from the tests" for more, instead of "Captured N call(s)" (#733).
 
+- `record` says "Left out 1 input the original ran too long on" for one timed-out
+  input and "Left out N inputs ..." for more, instead of "Left out N input(s)"
+  (#734, #754 by @Papito084).
+- `fuzz --keep` says "Kept 1 case in ..." for one kept case and "Kept N cases in ..."
+  for more, instead of "Kept N case(s)" (#735, #753 by @Papito084).
+- `enable --only` says "unknown export in ..." for one unknown name and "unknown exports in ..."
+  for more, instead of "unknown export(s)", and "requested function does not match" for one
+  failing function and "requested functions do not match" for more (#736, #752 by @Papito084).
+- `app record --no-fresh` keeps the `files/` snapshot when a case that stays reads it through a
+  folder above it (`fs.base = "."`), not only through one inside it (#739, #749 by @XiaoBinGan).
+- `analyze`'s empty-plan warnings say "1 TypeScript/JavaScript file under ... is excluded" and
+  "only 1 compiled or packaged file" for one file, instead of "1 ... files ... are"
+  (#738, #746 by @brixtonpham).
+- `npx rust-anything@latest setup` now leaves agents that keep working: a copy run from npx's
+  cache sets each agent to start `npx -y rust-anything@<version> mcp` (`cmd /c npx ...` on
+  Windows) instead of the cached binary, which npm may delete. `doctor` reads that entry as
+  current.
+- A GitHub Action runs `rust-anything gate` in CI on every push:
+  `uses: erkamyaman/rust-anything@main` with `crates:` listing the crate folders. It installs
+  rust-anything from npm and fails the job when any crate fails the gate.
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`
