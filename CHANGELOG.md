@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `record` says "Left out 1 input the original ran too long on" for one timed-out
+  input and "Left out N inputs ..." for more, instead of "Left out N input(s)" (#734).
+
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`

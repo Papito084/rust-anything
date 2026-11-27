@@ -1044,8 +1044,13 @@ fn run() -> Result<ExitCode> {
                 );
             }
             if !outcome.timed_out.is_empty() {
+                let noun = if outcome.timed_out.len() == 1 {
+                    "input"
+                } else {
+                    "inputs"
+                };
                 say!(
-                    "Left out {} input(s) the original ran too long on (over the per-case limit, \
+                    "Left out {} {noun} the original ran too long on (over the per-case limit, \
                      RUST_ANYTHING_CASE_TIMEOUT seconds, 10 by default). The original does this \
                      itself, so the port need not match it there:",
                     outcome.timed_out.len()
