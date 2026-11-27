@@ -4,8 +4,7 @@
 
 - `enable --only` says "unknown export in ..." for one unknown name and "unknown exports in ..."
   for more, instead of "unknown export(s)", and "requested function does not match" for one
-  failing function and "requested functions do not match" for more (#736).
-
+  failing function and "requested functions do not match" for more (#736, #752 by @Papito084).
 - `app record --no-fresh` keeps the `files/` snapshot when a case that stays reads it through a
   folder above it (`fs.base = "."`), not only through one inside it (#739, #749 by @XiaoBinGan).
 - `analyze`'s empty-plan warnings say "1 TypeScript/JavaScript file under ... is excluded" and
