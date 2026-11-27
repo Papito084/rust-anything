@@ -203,7 +203,9 @@ pub fn package(opts: &Options) -> Result<Outcome> {
         }
     };
     if !opts.bin.is_empty() && opts.original.is_some() {
-        bail!("--bin and --original are for CLI front doors (`rust/app`); this is a {kind_label} crate");
+        bail!(
+            "--bin and --original are for CLI front doors (`rust/app`); this is a {kind_label} crate"
+        );
     } else if !opts.bin.is_empty() {
         bail!("--bin is for CLI front doors (`rust/app`); this is a {kind_label} crate");
     } else if opts.original.is_some() {

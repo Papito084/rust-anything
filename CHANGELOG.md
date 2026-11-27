@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-- `package`: refuse `--bin` and `--original` on unit crates, and `--fallback` on wasm and PyO3
-  crates (#701).
-
+- `package` refuses `--bin` and `--original` on a napi, wasm or PyO3 crate, and `--fallback` on a
+  wasm or PyO3 crate, naming the flag and what it is for, before anything is written (also with
+  `--dry-run`). They used to be dropped silently (#701, #708 by @Papito084).
+- `gate` starts every check's detail in the same column, padding names to the longest one, so
+  `error cases` and `known diffs` line up with the rest (#700, #707 by @Papito084).
+- `gate` says "the 1 function that fails in the original has a recorded failing case" instead of
+  "each of the 1 functions that fail" in the `error cases` check (#698, #706 by @Papito084).
+- `app drift` prints "1 case; build: ..." instead of "1 cases" for a one-case recording
+  (#699, #705 by @Papito084).
 - A napi export called without an optional structured argument, such as an array, now gets
   `None` on the JSON path that async calls always take, instead of failing with
   `invalid type: map, expected a sequence` before the port runs. A `serde_json::Value` parameter

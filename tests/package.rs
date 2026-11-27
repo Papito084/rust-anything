@@ -559,7 +559,10 @@ fn package_refuses_fallback_on_wasm_and_pyo3_crates() {
         "py-fallback",
         &[
             ("src/textkit/__init__.py", ""),
-            ("src/textkit/words.py", "def count(s):\n    return len(s.split())\n"),
+            (
+                "src/textkit/words.py",
+                "def count(s):\n    return len(s.split())\n",
+            ),
         ],
     );
     let py_port = bridged(&py_root, "src/textkit/", Kind::Pyo3);
