@@ -381,10 +381,8 @@ mod tests {
 
     #[test]
     fn error_cases_detail_singular_and_plural() {
-        let dir = std::env::temp_dir().join(format!(
-            "rust-anything-error-detail-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("rust-anything-error-detail-{}", std::process::id()));
         let root = dir.join("root");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&root).unwrap();
@@ -402,14 +400,12 @@ mod tests {
             language: Lang::Ts,
             kind: crate::bridge::Kind::Napi,
             crate_name: "test-rs".into(),
-            exports: vec![
-                crate::ts::exports::ExportedFn {
-                    name: "parse".into(),
-                    file: "test.ts".into(),
-                    line: 1,
-                    ..Default::default()
-                },
-            ],
+            exports: vec![crate::ts::exports::ExportedFn {
+                name: "parse".into(),
+                file: "test.ts".into(),
+                line: 1,
+                ..Default::default()
+            }],
             classes: Vec::new(),
             js_only: Vec::new(),
             batches: Vec::new(),
