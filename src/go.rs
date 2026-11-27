@@ -362,7 +362,10 @@ pub fn go(opts: &Options) -> Result<Outcome> {
                 let n: usize = c.per_function.values().sum();
                 say(
                     &mut steps,
-                    format!("captured {n} real call(s) from the workload"),
+                    format!(
+                        "captured {} from the workload",
+                        crate::report::count(n, "real call")
+                    ),
                 );
                 (n > 0).then_some(c.inputs)
             }
@@ -379,8 +382,9 @@ pub fn go(opts: &Options) -> Result<Outcome> {
         say(
             &mut steps,
             format!(
-                "recorded {} case(s) ({} throw in the original)",
-                recorded.cases, recorded.errors
+                "recorded {} ({} threw in the original)",
+                crate::report::count(recorded.cases, "case"),
+                recorded.errors
             ),
         );
     } else {
@@ -628,7 +632,11 @@ fn check(crate_dir: &Path, steps: &mut Vec<String>) -> Result<(usize, usize, Vec
         if failed.is_empty() {
             "gate passed".into()
         } else {
-            format!("gate: {} check(s) fail", failed.len())
+            format!(
+                "gate: {} {}",
+                crate::report::count(failed.len(), "check"),
+                if failed.len() == 1 { "fails" } else { "fail" }
+            )
         },
     );
     Ok((diff.total, diff.passed, failed))
@@ -1021,5 +1029,53 @@ mod tests {
             err_no_agent,
             "`--rounds` needs `--agent`: rounds are agent turns"
         );
+    }
+
+    #[test]
+    fn go_progress_formatting_uses_singular_and_plural_counts() {
+        assert_eq!(
+            format!(
+                "captured {} from the workload",
+                crate::report::count(1, "real call")
+            ),
+            "captured 1 real call from the workload"
+        );
+        assert_eq!(
+            format!(
+                "captured {} from the workload",
+                crate::report::count(1000, "real call")
+            ),
+            "captured 1000 real calls from the workload"
+        );
+        assert_eq!(
+            format!(
+                "recorded {} ({} threw in the original)",
+                crate::report::count(1, "case"),
+                0
+            ),
+            "recorded 1 case (0 threw in the original)"
+        );
+        assert_eq!(
+            format!(
+                "recorded {} ({} threw in the original)",
+                crate::report::count(1013, "case"),
+                0
+            ),
+            "recorded 1013 cases (0 threw in the original)"
+        );
+        let gate_summary = |failed: usize| {
+            if failed == 0 {
+                "gate passed".to_string()
+            } else {
+                format!(
+                    "gate: {} {}",
+                    crate::report::count(failed, "check"),
+                    if failed == 1 { "fails" } else { "fail" }
+                )
+            }
+        };
+        assert_eq!(gate_summary(0), "gate passed");
+        assert_eq!(gate_summary(1), "gate: 1 check fails");
+        assert_eq!(gate_summary(2), "gate: 2 checks fail");
     }
 }
