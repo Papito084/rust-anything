@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `enable --only` says "unknown export in ..." for one unknown name and "unknown exports in ..."
+  for more, instead of "unknown export(s)", and "requested function does not match" for one
+  failing function and "requested functions do not match" for more (#736).
+
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`
