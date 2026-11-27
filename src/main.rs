@@ -1304,8 +1304,9 @@ fn run() -> Result<ExitCode> {
                     );
                 }
                 if f.kept > 0 {
+                    let case_noun = if f.kept == 1 { "case" } else { "cases" };
                     say!(
-                        "Kept {} case(s) in {}: the next diff and gate check them",
+                        "Kept {} {case_noun} in {}: the next diff and gate check them",
                         f.kept,
                         f.recording.display()
                     );
