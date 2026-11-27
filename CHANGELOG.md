@@ -3,8 +3,8 @@
 ## Unreleased
 
 - `record` says "Left out 1 input the original ran too long on" for one timed-out
-  input and "Left out N inputs ..." for more, instead of "Left out N input(s)" (#734).
-
+  input and "Left out N inputs ..." for more, instead of "Left out N input(s)"
+  (#734, #754 by @Papito084).
 - `fuzz --keep` says "Kept 1 case in ..." for one kept case and "Kept N cases in ..."
   for more, instead of "Kept N case(s)" (#735, #753 by @Papito084).
 - `enable --only` says "unknown export in ..." for one unknown name and "unknown exports in ..."
