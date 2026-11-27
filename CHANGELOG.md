@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `fuzz --keep` says "Kept 1 case in ..." for one kept case and "Kept N cases in ..."
+  for more, instead of "Kept N case(s)" (#735).
+
 - `analyze` also counts `Number.parseInt` and `Number.parseFloat` calls as `Number semantics`,
   alongside global `parseInt` and `parseFloat` (#730 by @brixtonpham).
 - `--db-dump` output is recorded with `\n` line endings: on Windows, Python's `print` and `sqlite3`
