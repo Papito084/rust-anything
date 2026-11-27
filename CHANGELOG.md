@@ -3,8 +3,7 @@
 ## Unreleased
 
 - `fuzz --keep` says "Kept 1 case in ..." for one kept case and "Kept N cases in ..."
-  for more, instead of "Kept N case(s)" (#735).
-
+  for more, instead of "Kept N case(s)" (#735, #753 by @Papito084).
 - `enable --only` says "unknown export in ..." for one unknown name and "unknown exports in ..."
   for more, instead of "unknown export(s)", and "requested function does not match" for one
   failing function and "requested functions do not match" for more (#736, #752 by @Papito084).
