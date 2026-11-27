@@ -966,9 +966,11 @@ fn run() -> Result<ExitCode> {
                 .transpose()?;
             let inputs = if from_tests {
                 let c = rust_anything::from_tests::capture(&crate_dir, &test_command)?;
+                let total_calls = c.per_function.values().sum::<usize>();
+                let call_noun = if total_calls == 1 { "call" } else { "calls" };
                 say!(
-                    "Captured {} call(s) from the tests{}:",
-                    c.per_function.values().sum::<usize>(),
+                    "Captured {} {call_noun} from the tests{}:",
+                    total_calls,
                     if c.tests_passed {
                         ""
                     } else {
