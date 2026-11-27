@@ -360,13 +360,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
             Lang::Ts | Lang::Python => {
                 let c = crate::from_tests::capture(&crate_dir, opts.command)?;
                 let n: usize = c.per_function.values().sum();
-                say(
-                    &mut steps,
-                    format!(
-                        "captured {} from the workload",
-                        crate::report::count(n, "real call")
-                    ),
-                );
+                say(&mut steps, captured_line(n));
                 (n > 0).then_some(c.inputs)
             }
             _ => None,
@@ -379,14 +373,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
             resolve_from: None,
             node_args: &[],
         })?;
-        say(
-            &mut steps,
-            format!(
-                "recorded {} ({} threw in the original)",
-                crate::report::count(recorded.cases, "case"),
-                recorded.errors
-            ),
-        );
+        say(&mut steps, recorded_line(recorded.cases, recorded.errors));
     } else {
         say(&mut steps, "kept the recorded cases".into());
     }
@@ -627,19 +614,30 @@ fn check(crate_dir: &Path, steps: &mut Vec<String>) -> Result<(usize, usize, Vec
         .filter(|c| !c.passed)
         .map(|c| format!("gate check `{}` fails: {}", c.name, c.detail))
         .collect();
-    say(
-        steps,
-        if failed.is_empty() {
-            "gate passed".into()
-        } else {
-            format!(
-                "gate: {} {}",
-                crate::report::count(failed.len(), "check"),
-                if failed.len() == 1 { "fails" } else { "fail" }
-            )
-        },
-    );
+    say(steps, gate_line(failed.len()));
     Ok((diff.total, diff.passed, failed))
+}
+
+fn captured_line(calls: usize) -> String {
+    format!(
+        "captured {} from the workload",
+        crate::report::count(calls, "real call")
+    )
+}
+
+fn recorded_line(cases: usize, errors: usize) -> String {
+    format!(
+        "recorded {} ({errors} threw in the original)",
+        crate::report::count(cases, "case")
+    )
+}
+
+fn gate_line(failed: usize) -> String {
+    match failed {
+        0 => "gate passed".into(),
+        1 => "gate: 1 check fails".into(),
+        n => format!("gate: {n} checks fail"),
+    }
 }
 
 /// What still differs, for the agent's next attempt: each distinct difference with one example
@@ -1031,49 +1029,21 @@ mod tests {
 
     #[test]
     fn go_progress_formatting_uses_singular_and_plural_counts() {
+        assert_eq!(captured_line(1), "captured 1 real call from the workload");
         assert_eq!(
-            format!(
-                "captured {} from the workload",
-                crate::report::count(1, "real call")
-            ),
-            "captured 1 real call from the workload"
-        );
-        assert_eq!(
-            format!(
-                "captured {} from the workload",
-                crate::report::count(1000, "real call")
-            ),
+            captured_line(1000),
             "captured 1000 real calls from the workload"
         );
         assert_eq!(
-            format!(
-                "recorded {} ({} threw in the original)",
-                crate::report::count(1, "case"),
-                0
-            ),
+            recorded_line(1, 0),
             "recorded 1 case (0 threw in the original)"
         );
         assert_eq!(
-            format!(
-                "recorded {} ({} threw in the original)",
-                crate::report::count(1013, "case"),
-                0
-            ),
-            "recorded 1013 cases (0 threw in the original)"
+            recorded_line(1013, 2),
+            "recorded 1013 cases (2 threw in the original)"
         );
-        let gate_summary = |failed: usize| {
-            if failed == 0 {
-                "gate passed".to_string()
-            } else {
-                format!(
-                    "gate: {} {}",
-                    crate::report::count(failed, "check"),
-                    if failed == 1 { "fails" } else { "fail" }
-                )
-            }
-        };
-        assert_eq!(gate_summary(0), "gate passed");
-        assert_eq!(gate_summary(1), "gate: 1 check fails");
-        assert_eq!(gate_summary(2), "gate: 2 checks fail");
+        assert_eq!(gate_line(0), "gate passed");
+        assert_eq!(gate_line(1), "gate: 1 check fails");
+        assert_eq!(gate_line(2), "gate: 2 checks fail");
     }
 }

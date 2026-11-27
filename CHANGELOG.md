@@ -3,8 +3,8 @@
 ## Unreleased
 
 - `go` says "captured 1 real call" / "N real calls", "recorded N cases (N threw in the original)",
-  and "gate: 1 check fails" / "N checks fail" instead of "(s)" and "throw" (#732 by @Papito084).
-
+  and "gate: 1 check fails" / "N checks fail" instead of "(s)" and "throw"
+  (#732, #757 by @Papito084).
 - `go` retry prompt says "1 distinct difference" for one difference and "N distinct differences"
   for more, instead of "N distinct difference(s)", and "1 case" instead of "1 case(s)"
   (#731, #756 by @Papito084).
