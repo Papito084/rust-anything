@@ -3,8 +3,8 @@
 ## Unreleased
 
 - `record --from-tests` says "Captured 1 call from the tests" for one call and
-  "Captured N calls from the tests" for more, instead of "Captured N call(s)" (#733).
-
+  "Captured N calls from the tests" for more, instead of "Captured N call(s)"
+  (#733, #755 by @Papito084).
 - `record` says "Left out 1 input the original ran too long on" for one timed-out
   input and "Left out N inputs ..." for more, instead of "Left out N input(s)"
   (#734, #754 by @Papito084).
